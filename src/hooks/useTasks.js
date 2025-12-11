@@ -182,6 +182,11 @@ export const useTasks = (user) => {
         })();
       }
       
+      const q = getTasksCollection(user.uid);
+      const tasksPath = `artifacts/${appId}/users/${user.uid}/tasks`;
+      console.log('Tasks listener path:', tasksPath);
+      console.log('Setting up Firestore listener for collection:', q.path);
+
       const unsubscribe = onSnapshot(
         q,
         (snapshot) => {
