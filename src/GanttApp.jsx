@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef, lazy, Suspense } from 'react';
 import {
   Plus,
   Calendar,
@@ -21,14 +21,16 @@ import { useAuth } from './hooks/useAuth';
 import { useTasks } from './hooks/useTasks';
 import { useDragAndDrop } from './hooks/useDragAndDrop';
 
-// Components
+// Components - Core (loaded immediately)
 import { Sidebar } from './components/Sidebar';
 import { GanttChart } from './components/GanttChart';
-import { TaskModal } from './components/TaskModal';
-import { SettingsModal } from './components/SettingsModal';
-import { ArchiveModal } from './components/ArchiveModal';
-import { TrashModal } from './components/TrashModal';
-import { Dashboard } from './components/Dashboard';
+
+// Components - Lazy loaded (loaded on demand)
+const TaskModal = lazy(() => import('./components/TaskModal').then(module => ({ default: module.TaskModal })));
+const SettingsModal = lazy(() => import('./components/SettingsModal').then(module => ({ default: module.SettingsModal })));
+const ArchiveModal = lazy(() => import('./components/ArchiveModal').then(module => ({ default: module.ArchiveModal })));
+const TrashModal = lazy(() => import('./components/TrashModal').then(module => ({ default: module.TrashModal })));
+const Dashboard = lazy(() => import('./components/Dashboard').then(module => ({ default: module.Dashboard })));
 
 // Utils & Config
 import { TRANSLATIONS } from './translations';
@@ -539,12 +541,18 @@ export default function GanttApp() {
 
           {isDashboardOpen ? (
             <div className="flex-1 overflow-auto bg-gray-50 dark:bg-gray-900">
-              <Dashboard 
-                tasks={tasks} 
-                t={t} 
-                onTaskClick={handleOpenModal}
-                warningThreshold={warningThreshold}
-              />
+              <Suspense fallback={
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-gray-500 dark:text-gray-400">{t('loading') || 'Loading...'}</div>
+                </div>
+              }>
+                <Dashboard 
+                  tasks={tasks} 
+                  t={t} 
+                  onTaskClick={handleOpenModal}
+                  warningThreshold={warningThreshold}
+                />
+              </Suspense>
             </div>
           ) : (
             <GanttChart
@@ -565,60 +573,76 @@ export default function GanttApp() {
           )}
         </div>
 
-        {/* Modals */}
-        <TaskModal
-          isOpen={isModalOpen}
-          task={editingTask}
-          onClose={() => {
-            setIsModalOpen(false);
-            setEditingTask(null);
-          }}
-          onSave={handleSaveTask}
-          onDelete={handleDeleteTask}
-          warningThreshold={warningThreshold}
-          t={t}
-        />
+        {/* Modals - Lazy loaded */}
+        {isModalOpen && (
+          <Suspense fallback={null}>
+            <TaskModal
+              isOpen={isModalOpen}
+              task={editingTask}
+              onClose={() => {
+                setIsModalOpen(false);
+                setEditingTask(null);
+              }}
+              onSave={handleSaveTask}
+              onDelete={handleDeleteTask}
+              warningThreshold={warningThreshold}
+              t={t}
+            />
+          </Suspense>
+        )}
 
-        <SettingsModal
-          isOpen={isSettingsOpen}
-          onClose={() => setIsSettingsOpen(false)}
-          warningThreshold={warningThreshold}
-          showChecklistInGantt={showChecklistInGantt}
-          onWarningThresholdChange={setWarningThreshold}
-          onShowChecklistChange={setShowChecklistInGantt}
-          cloudBackups={cloudBackups}
-          loadingBackups={loadingBackups}
-          onCreateCloudBackup={createCloudBackup}
-          onRestoreCloudBackup={restoreCloudBackup}
-          onExportData={exportData}
-          onImportClick={handleImportClick}
-          t={t}
-        />
+        {isSettingsOpen && (
+          <Suspense fallback={null}>
+            <SettingsModal
+              isOpen={isSettingsOpen}
+              onClose={() => setIsSettingsOpen(false)}
+              warningThreshold={warningThreshold}
+              showChecklistInGantt={showChecklistInGantt}
+              onWarningThresholdChange={setWarningThreshold}
+              onShowChecklistChange={setShowChecklistInGantt}
+              cloudBackups={cloudBackups}
+              loadingBackups={loadingBackups}
+              onCreateCloudBackup={createCloudBackup}
+              onRestoreCloudBackup={restoreCloudBackup}
+              onExportData={exportData}
+              onImportClick={handleImportClick}
+              t={t}
+            />
+          </Suspense>
+        )}
 
-        <ArchiveModal
-          isOpen={isArchiveOpen}
-          onClose={() => setIsArchiveOpen(false)}
-          archivedTasks={archivedTasks}
-          onRestore={restoreTaskStatus}
-          onDelete={deleteTask}
-          confirmDeleteId={confirmDeleteId}
-          onSetConfirmDeleteId={setConfirmDeleteId}
-          t={t}
-        />
+        {isArchiveOpen && (
+          <Suspense fallback={null}>
+            <ArchiveModal
+              isOpen={isArchiveOpen}
+              onClose={() => setIsArchiveOpen(false)}
+              archivedTasks={archivedTasks}
+              onRestore={restoreTaskStatus}
+              onDelete={deleteTask}
+              confirmDeleteId={confirmDeleteId}
+              onSetConfirmDeleteId={setConfirmDeleteId}
+              t={t}
+            />
+          </Suspense>
+        )}
 
-        <TrashModal
-          isOpen={isTrashOpen}
-          onClose={() => setIsTrashOpen(false)}
-          deletedTasks={deletedTasks}
-          onRestore={restoreTask}
-          onPermanentDelete={permanentDeleteTask}
-          confirmDeleteId={confirmDeleteId}
-          confirmEmptyTrash={confirmEmptyTrash}
-          onSetConfirmDeleteId={setConfirmDeleteId}
-          onSetConfirmEmptyTrash={setConfirmEmptyTrash}
-          onEmptyTrash={handleEmptyTrash}
-          t={t}
-        />
+        {isTrashOpen && (
+          <Suspense fallback={null}>
+            <TrashModal
+              isOpen={isTrashOpen}
+              onClose={() => setIsTrashOpen(false)}
+              deletedTasks={deletedTasks}
+              onRestore={restoreTask}
+              onPermanentDelete={permanentDeleteTask}
+              confirmDeleteId={confirmDeleteId}
+              confirmEmptyTrash={confirmEmptyTrash}
+              onSetConfirmDeleteId={setConfirmDeleteId}
+              onSetConfirmEmptyTrash={setConfirmEmptyTrash}
+              onEmptyTrash={handleEmptyTrash}
+              t={t}
+            />
+          </Suspense>
+        )}
 
 
         {/* Hidden file input */}

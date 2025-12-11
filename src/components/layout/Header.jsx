@@ -17,6 +17,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Download,
+  LogOut,
 } from 'lucide-react';
 
 export const Header = memo(({
@@ -40,6 +41,7 @@ export const Header = memo(({
   onToggleDashboard,
   onNewTask,
   onExportCSV,
+  onLogout,
   t,
 }) => {
   return (
@@ -203,6 +205,16 @@ export const Header = memo(({
           >
             <BarChart3 size={20} />
           </button>
+          {onLogout && (
+            <button
+              onClick={onLogout}
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md text-gray-600 dark:text-gray-300"
+              title={t('authLogout') || 'Logga ut'}
+              aria-label={t('authLogout') || 'Logga ut'}
+            >
+              <LogOut size={20} />
+            </button>
+          )}
         </div>
 
         <button

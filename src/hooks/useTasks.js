@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { onSnapshot, addDoc, updateDoc, deleteDoc, setDoc, getDocs } from 'firebase/firestore';
-import { getTasksCollection, getTaskDoc, getBackupsCollection } from '../config/firebase';
+import { getTasksCollection, getTaskDoc, getBackupsCollection, appId, isDemoModeAllowed } from '../config/firebase';
 import { generateId, formatDate } from '../utils/helpers';
 import { showError, showSuccess } from '../utils/toast';
 import { validateTasks, validateTask } from '../utils/validation';
@@ -34,8 +34,16 @@ export const useTasks = (user) => {
     setLoading(true); // Reset loading state when user changes
 
     // For demo mode (mock users), use localStorage instead of Firestore
+    // BUT ONLY on localhost - production requires real Firebase auth
     if (user.uid && user.uid.startsWith('demo-user-')) {
-      console.log('Demo mode: Using localStorage for tasks');
+      if (!isDemoModeAllowed()) {
+        console.error('[PRODUCTION] Demo mode is not allowed in production. Please log in with email/password.');
+        setError(new Error('Demo mode is disabled in production. Please log in with email/password.'));
+        setLoading(false);
+        setTasks([]);
+        return;
+      }
+      console.log('[LOCAL DEMO MODE] Using localStorage for tasks (localhost only)');
       try {
         const stored = localStorage.getItem('demo-tasks');
         if (stored) {
@@ -88,9 +96,91 @@ export const useTasks = (user) => {
       };
     }
 
+    // Check for localStorage data to migrate when switching to Firebase
+    const checkAndMigrateLocalStorageData = async (firebaseUser) => {
+      try {
+        const stored = localStorage.getItem('demo-tasks');
+        if (!stored) return false;
+
+        const tasksData = JSON.parse(stored);
+        if (!tasksData || tasksData.length === 0) return false;
+
+        // Check if migration has already been done for this Firebase user
+        const migrationKey = `migrated-to-firebase-${firebaseUser.uid}`;
+        if (localStorage.getItem(migrationKey)) {
+          console.log('[Migration] Already migrated for this Firebase user');
+          return false;
+        }
+
+        // Check if Firestore already has tasks (don't migrate if user already has data)
+        const q = getTasksCollection(firebaseUser.uid);
+        const snapshot = await getDocs(q);
+        if (snapshot.docs.length > 0) {
+          console.log('[Migration] Firestore already has tasks, skipping migration');
+          // Mark as migrated anyway to avoid prompting
+          localStorage.setItem(migrationKey, 'true');
+          return false;
+        }
+
+        console.log('[Migration] Found localStorage data to migrate:', tasksData.length, 'tasks');
+        
+        // Migrate tasks to Firestore
+        const validatedTasks = validateTasks(tasksData);
+        const migrationPromises = validatedTasks.map(async (task) => {
+          try {
+            const taskRef = getTaskDoc(firebaseUser.uid, task.id);
+            await setDoc(taskRef, task);
+            return true;
+          } catch (error) {
+            console.error(`[Migration] Error migrating task ${task.id}:`, error);
+            return false;
+          }
+        });
+
+        const results = await Promise.all(migrationPromises);
+        const successCount = results.filter(Boolean).length;
+        
+        if (successCount > 0) {
+          console.log(`[Migration] Successfully migrated ${successCount}/${validatedTasks.length} tasks to Firestore`);
+          // Mark as migrated
+          localStorage.setItem(migrationKey, 'true');
+          // Optionally clear localStorage data after successful migration
+          // localStorage.removeItem('demo-tasks');
+          showSuccess(`Migrated ${successCount} tasks from local storage to cloud`);
+          return true;
+        }
+      } catch (error) {
+        console.error('[Migration] Error during migration:', error);
+      }
+      return false;
+    };
+
     try {
       const q = getTasksCollection(user.uid);
+      const tasksPath = `artifacts/${appId}/users/${user.uid}/tasks`;
+      console.log('Tasks listener path:', tasksPath);
       console.log('Setting up Firestore listener for collection:', q.path);
+      
+      // Check for localStorage migration on first Firebase login (async)
+      const migrationKey = `migrated-to-firebase-${user.uid}`;
+      if (!localStorage.getItem(migrationKey)) {
+        // Run migration check asynchronously
+        (async () => {
+          try {
+            // Check if Firestore is empty before attempting migration
+            const initialSnapshot = await getDocs(q);
+            if (initialSnapshot.docs.length === 0) {
+              // Firestore is empty, check for localStorage data
+              await checkAndMigrateLocalStorageData(user);
+            } else {
+              // Firestore has data, mark as migrated
+              localStorage.setItem(migrationKey, 'true');
+            }
+          } catch (error) {
+            console.error('[Migration] Error checking for migration:', error);
+          }
+        })();
+      }
       
       const unsubscribe = onSnapshot(
         q,
@@ -171,10 +261,13 @@ export const useTasks = (user) => {
       throw new Error(errorMsg);
     }
 
-    // For demo mode, use localStorage
+    // For demo mode, use localStorage (only on localhost)
     if (user.uid && user.uid.startsWith('demo-user-')) {
+      if (!isDemoModeAllowed()) {
+        throw new Error('Demo mode is disabled in production. Please log in with email/password.');
+      }
       try {
-        console.log('Adding task to localStorage (demo mode):', taskData);
+        console.log('[LOCAL DEMO MODE] Adding task to localStorage:', taskData);
         
         // Always read from localStorage to avoid stale state
         const stored = localStorage.getItem('demo-tasks');
@@ -256,8 +349,11 @@ export const useTasks = (user) => {
       throw new Error('No user');
     }
 
-    // For demo mode, use localStorage
+    // For demo mode, use localStorage (only on localhost)
     if (user.uid && user.uid.startsWith('demo-user-')) {
+      if (!isDemoModeAllowed()) {
+        throw new Error('Demo mode is disabled in production. Please log in with email/password.');
+      }
       try {
         const currentTasks = tasks || [];
         const updatedTasks = currentTasks.map(t => 
@@ -289,8 +385,11 @@ export const useTasks = (user) => {
       throw new Error('No user');
     }
 
-    // For demo mode, use localStorage
+    // For demo mode, use localStorage (only on localhost)
     if (user.uid && user.uid.startsWith('demo-user-')) {
+      if (!isDemoModeAllowed()) {
+        throw new Error('Demo mode is disabled in production. Please log in with email/password.');
+      }
       try {
         const currentTasks = tasks || [];
         const updatedTasks = currentTasks.map(t => 
@@ -327,8 +426,11 @@ export const useTasks = (user) => {
       return;
     }
 
-    // For demo mode, use localStorage
+    // For demo mode, use localStorage (only on localhost)
     if (user.uid && user.uid.startsWith('demo-user-')) {
+      if (!isDemoModeAllowed()) {
+        throw new Error('Demo mode is disabled in production. Please log in with email/password.');
+      }
       try {
         const stored = localStorage.getItem('demo-tasks');
         if (!stored) {
@@ -370,10 +472,13 @@ export const useTasks = (user) => {
 
     console.log('restoreTask called for taskId:', taskId);
 
-    // For demo mode, use localStorage
+    // For demo mode, use localStorage (only on localhost)
     if (user.uid && user.uid.startsWith('demo-user-')) {
+      if (!isDemoModeAllowed()) {
+        throw new Error('Demo mode is disabled in production. Please log in with email/password.');
+      }
       try {
-        console.log('Restoring task from localStorage (demo mode)');
+        console.log('[LOCAL DEMO MODE] Restoring task from localStorage');
         const stored = localStorage.getItem('demo-tasks');
         if (!stored) {
           showError('No tasks found');
@@ -435,10 +540,13 @@ export const useTasks = (user) => {
 
     console.log('restoreTaskStatus called for taskId:', taskId);
 
-    // For demo mode, use localStorage
+    // For demo mode, use localStorage (only on localhost)
     if (user.uid && user.uid.startsWith('demo-user-')) {
+      if (!isDemoModeAllowed()) {
+        throw new Error('Demo mode is disabled in production. Please log in with email/password.');
+      }
       try {
-        console.log('Restoring task status from localStorage (demo mode)');
+        console.log('[LOCAL DEMO MODE] Restoring task status from localStorage');
         const stored = localStorage.getItem('demo-tasks');
         if (!stored) {
           showError('No tasks found');

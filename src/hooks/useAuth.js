@@ -1,92 +1,118 @@
 import { useState, useEffect } from 'react';
-import { signInAnonymously, onAuthStateChanged, signInWithCustomToken } from 'firebase/auth';
-import { auth } from '../config/firebase';
+import { 
+  onAuthStateChanged, 
+  signInWithCustomToken,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut
+} from 'firebase/auth';
+import { auth, isLocalDev } from '../config/firebase';
 
 export const useAuth = () => {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true); // Start with loading = true
 
   useEffect(() => {
     let isMounted = true;
-    let authTimeout = null;
 
-    const createMockUser = () => {
-      const mockUser = {
-        uid: 'demo-user-' + Date.now(),
-        isAnonymous: true,
-        email: null,
-      };
-      console.log('Creating mock user for demo mode:', mockUser.uid);
-      if (isMounted) {
-        setUser(mockUser);
-        setLoading(false);
-      }
-      return mockUser;
-    };
-
-    const initAuth = async () => {
-      try {
-        const token = typeof window !== 'undefined' && window.__initial_auth_token;
-        if (token) {
-          console.log('Signing in with custom token...');
-          await signInWithCustomToken(auth, token);
-        } else {
-          console.log('Signing in anonymously...');
-          try {
-            await signInAnonymously(auth);
-          } catch (anonError) {
-            console.warn('Anonymous auth failed:', anonError.code, anonError.message);
-            // Always create mock user if auth fails
-            createMockUser();
-            return;
-          }
-        }
-      } catch (err) {
-        console.error('Auth initialization error:', err.code, err.message);
-        // Always create mock user if auth fails
-        createMockUser();
-      }
-    };
-
-    // Set up auth state listener first
+    // Set up auth state listener - this will fire immediately with current auth state
     const unsubscribe = onAuthStateChanged(
       auth,
       (authUser) => {
-        console.log('Auth state changed:', authUser ? `User logged in (${authUser.uid})` : 'No user');
+        // Debug log for auth state changes
+        const isDev = isLocalDev();
+        
+        // In production, reject any demo users immediately
+        if (!isDev && authUser && authUser.uid && authUser.uid.startsWith('demo-user-')) {
+          console.error('[Auth] PRODUCTION: Rejecting demo user - AUTH REQUIRED');
+          console.error('[Auth] Demo mode is not allowed in production. Please log in with email/password.');
+          if (isMounted) {
+            setUser(null); // Reject demo user
+            setLoading(false);
+          }
+          // Sign out the demo user if somehow they got through
+          signOut(auth).catch(() => {});
+          return;
+        }
+        
+        if (authUser) {
+          const mode = authUser.uid && authUser.uid.startsWith('demo-user-') ? 'LOCAL DEMO MODE' : (isDev ? 'LOCAL DEV' : 'PRODUCTION');
+          console.log(`[Auth] ${mode} - User logged in:`, authUser.uid, authUser.email || 'no email');
+        } else {
+          console.log(`[Auth] ${isDev ? 'LOCAL DEV' : 'PRODUCTION: AUTH REQUIRED'} - No user (showing login screen)`);
+        }
+        
         if (isMounted) {
           setUser(authUser);
-          setLoading(false);
-        }
-        if (authTimeout) {
-          clearTimeout(authTimeout);
-          authTimeout = null;
+          setLoading(false); // Set loading to false once we know the auth state
         }
       },
       (error) => {
         console.error('Auth state change error:', error.code, error.message);
-        // Always create mock user on error
-        createMockUser();
+        if (isMounted) {
+          setUser(null);
+          setLoading(false); // Set loading to false even on error
+        }
       }
     );
 
-    // Initialize auth
-    initAuth();
-
-    // Fallback: if no user after 2 seconds, create mock user
-    authTimeout = setTimeout(() => {
-      if (isMounted) {
-        console.log('Auth timeout - creating mock user as fallback');
-        createMockUser();
-      }
-    }, 2000);
+    // Check for custom token (only if explicitly provided via env var)
+    // This is for special cases, not automatic anonymous login
+    // NOTE: In production, we should NOT use custom tokens for automatic login
+    const isDev = isLocalDev();
+    const token = typeof window !== 'undefined' && window.__initial_auth_token;
+    if (token && isDev) {
+      // Only allow custom token in local dev
+      console.log('[Auth] LOCAL DEV: Custom token detected, signing in...');
+      signInWithCustomToken(auth, token).catch((err) => {
+        console.error('Custom token sign-in error:', err.code, err.message);
+      });
+    } else if (token && !isDev) {
+      console.warn('[Auth] PRODUCTION: Custom token detected but ignored - AUTH REQUIRED');
+    }
 
     return () => {
       isMounted = false;
-      if (authTimeout) clearTimeout(authTimeout);
       unsubscribe();
     };
   }, []);
 
-  return { user, loading };
+  // Register new user with email and password
+  const register = async (email, password) => {
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      console.log('Auth: user registered', userCredential.user.uid, userCredential.user.email);
+      return { success: true, user: userCredential.user };
+    } catch (error) {
+      console.error('Auth: registration error', error.code, error.message);
+      return { success: false, error: error.message, code: error.code };
+    }
+  };
+
+  // Login with email and password
+  const login = async (email, password) => {
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      console.log('Auth: user logged in', userCredential.user.uid, userCredential.user.email);
+      return { success: true, user: userCredential.user };
+    } catch (error) {
+      console.error('Auth: login error', error.code, error.message);
+      return { success: false, error: error.message, code: error.code };
+    }
+  };
+
+  // Logout current user
+  const logout = async () => {
+    try {
+      await signOut(auth);
+      console.log('Auth: user logged out');
+      return { success: true };
+    } catch (error) {
+      console.error('Auth: logout error', error.code, error.message);
+      return { success: false, error: error.message };
+    }
+  };
+
+  return { user, loading, register, login, logout };
 };
 

@@ -1,6 +1,6 @@
 // Main App component - Refactored from GanttApp.jsx
 // Source: src/GanttApp.jsx
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef, Suspense, lazy } from 'react';
 
 // Hooks
 import { useAuth } from './hooks/useAuth';
@@ -15,15 +15,15 @@ import { Header } from './components/layout/Header';
 import { Sidebar } from './components/layout/Sidebar';
 import { FiltersBar } from './components/common/FiltersBar';
 
-// Feature Components
-import { GanttTimeline } from './components/gantt/GanttTimeline';
-import { Dashboard } from './components/dashboard/Dashboard';
+// Feature Components - Lazy loaded for code splitting
+const GanttTimeline = lazy(() => import('./components/gantt/GanttTimeline').then(module => ({ default: module.GanttTimeline })));
+const Dashboard = lazy(() => import('./components/dashboard/Dashboard').then(module => ({ default: module.Dashboard })));
 
-// Modal Components
-import { TaskModal } from './components/modals/TaskModal';
-import { SettingsModal } from './components/modals/SettingsModal';
-import { ArchiveModal } from './components/modals/ArchiveModal';
-import { TrashModal } from './components/modals/TrashModal';
+// Modal Components - Lazy loaded (only loaded when modals are opened)
+const TaskModal = lazy(() => import('./components/modals/TaskModal').then(module => ({ default: module.TaskModal })));
+const SettingsModal = lazy(() => import('./components/modals/SettingsModal').then(module => ({ default: module.SettingsModal })));
+const ArchiveModal = lazy(() => import('./components/modals/ArchiveModal').then(module => ({ default: module.ArchiveModal })));
+const TrashModal = lazy(() => import('./components/modals/TrashModal').then(module => ({ default: module.TrashModal })));
 
 // Utils & Config
 import { TRANSLATIONS } from './constants/translations';
@@ -33,6 +33,10 @@ import { initToast, showError, showSuccess } from './utils/toast';
 import { exportToCSV } from './utils/export';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { ErrorDisplay } from './components/common/ErrorDisplay';
+import { FirebaseHealthCheck } from './components/common/FirebaseHealthCheck';
+import { DemoModeWarning } from './components/common/DemoModeWarning';
+import { AuthScreen } from './components/common/AuthScreen';
+import { isLocalDev } from './config/firebase';
 
 // Initialize toast on load
 if (typeof window !== 'undefined') {
@@ -41,7 +45,14 @@ if (typeof window !== 'undefined') {
 
 export default function App() {
   // Auth
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, register, login, logout } = useAuth();
+
+  // Debug log when App mounts
+  useEffect(() => {
+    const isDev = isLocalDev();
+    console.log(`[App] ${isDev ? 'LOCAL DEV' : 'PRODUCTION'} - App mounted, current user:`, 
+      user ? `${user.uid} (${user.email || 'no email'})` : 'null');
+  }, [user]);
 
   // Tasks
   const {
@@ -450,8 +461,51 @@ export default function App() {
 
   return (
     <ErrorBoundary t={t}>
+      {/* Firebase Health Check - runs diagnostic on mount */}
+      <FirebaseHealthCheck 
+        enabled={true}
+        onStatusChange={(connected, error) => {
+          if (connected) {
+            console.log('[App] Firebase health check passed');
+          } else {
+            console.warn('[App] Firebase health check failed:', error);
+          }
+        }}
+      />
       <div className={darkMode ? 'dark' : ''}>
-        <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-900 text-slate-900 dark:text-gray-100 font-sans overflow-hidden transition-colors duration-300">
+        {/* Show loading screen while checking auth */}
+        {authLoading ? (
+          <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-4 border-indigo-600 border-t-transparent mx-auto mb-4"></div>
+              <p className="text-gray-600 dark:text-gray-400">{t('loading') || 'Laddar...'}</p>
+            </div>
+          </div>
+        ) : !user ? (
+          /* Show AuthScreen if no user is logged in */
+          (() => {
+            const isDev = isLocalDev();
+            console.log(`[UI] ${isDev ? 'LOCAL DEV' : 'PRODUCTION: AUTH REQUIRED'} - Rendering AuthScreen (no user - requires email/password login)`);
+            return <AuthScreen onLogin={login} onRegister={register} t={t} />;
+          })()
+        ) : (() => {
+          /* Reject demo users in production */
+          const isDev = isLocalDev();
+          if (!isDev && user?.uid?.startsWith('demo-user-')) {
+            console.error('[UI] PRODUCTION: Rejecting demo user - AUTH REQUIRED');
+            console.error('[UI] Demo mode is not allowed in production. Please log in with email/password.');
+            // Sign out and show login screen
+            logout();
+            return <AuthScreen onLogin={login} onRegister={register} t={t} />;
+          }
+          
+          /* Show main app if user is logged in */
+          const mode = user?.uid?.startsWith('demo-user-') ? 'LOCAL DEMO MODE' : (isDev ? 'LOCAL DEV' : 'PRODUCTION');
+          console.log(`[UI] ${mode} - Rendering main app for user:`, user?.uid, user?.email);
+          return (
+            <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-900 text-slate-900 dark:text-gray-100 font-sans overflow-hidden transition-colors duration-300">
+        {/* Demo Mode Warning */}
+        <DemoModeWarning user={user} t={t} />
         {/* Header */}
         <Header
           isSidebarOpen={isSidebarOpen}
@@ -480,6 +534,7 @@ export default function App() {
           }}
           onNewTask={() => handleOpenModal()}
           onExportCSV={handleExportCSV}
+          onLogout={logout}
           t={t}
         />
 
@@ -521,86 +576,114 @@ export default function App() {
 
           {isDashboardOpen ? (
             <div className="flex-1 overflow-auto bg-gray-50 dark:bg-gray-900">
-              <Dashboard 
-                tasks={tasks} 
-                t={t} 
-                onTaskClick={handleOpenModal}
-                warningThreshold={warningThreshold}
-              />
+              <Suspense fallback={
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-gray-500 dark:text-gray-400">{t('loading')}...</div>
+                </div>
+              }>
+                <Dashboard 
+                  tasks={tasks} 
+                  t={t} 
+                  onTaskClick={handleOpenModal}
+                  warningThreshold={warningThreshold}
+                />
+              </Suspense>
             </div>
           ) : (
-            <GanttTimeline
-              tasks={processedTasks}
-              viewStart={viewStart}
-              viewDays={viewDays}
-              zoomLevel={zoomLevel}
-              warningThreshold={warningThreshold}
-              showChecklistInGantt={showChecklistInGantt}
-              dragState={dragState}
-              dragMovedRef={dragMovedRef}
-              onDragStart={handleDragStart}
-              onTaskClick={handleOpenModal}
-              onScrollTimeline={scrollTimeline}
-              t={t}
-              lang={lang}
-            />
+            <Suspense fallback={
+              <div className="flex items-center justify-center h-full">
+                <div className="text-gray-500 dark:text-gray-400">{t('loading')}...</div>
+              </div>
+            }>
+              <GanttTimeline
+                tasks={processedTasks}
+                viewStart={viewStart}
+                viewDays={viewDays}
+                zoomLevel={zoomLevel}
+                warningThreshold={warningThreshold}
+                showChecklistInGantt={showChecklistInGantt}
+                dragState={dragState}
+                dragMovedRef={dragMovedRef}
+                onDragStart={handleDragStart}
+                onTaskClick={handleOpenModal}
+                onScrollTimeline={scrollTimeline}
+                t={t}
+                lang={lang}
+              />
+            </Suspense>
           )}
         </div>
 
-        {/* Modals */}
-        <TaskModal
-          isOpen={isModalOpen}
-          task={editingTask}
-          onClose={() => {
-            setIsModalOpen(false);
-            setEditingTask(null);
-          }}
-          onSave={handleSaveTask}
-          onDelete={handleDeleteTask}
-          warningThreshold={warningThreshold}
-          t={t}
-        />
+        {/* Modals - Lazy loaded */}
+        {isModalOpen && (
+          <Suspense fallback={null}>
+            <TaskModal
+              isOpen={isModalOpen}
+              task={editingTask}
+              onClose={() => {
+                setIsModalOpen(false);
+                setEditingTask(null);
+              }}
+              onSave={handleSaveTask}
+              onDelete={handleDeleteTask}
+              warningThreshold={warningThreshold}
+              t={t}
+            />
+          </Suspense>
+        )}
 
-        <SettingsModal
-          isOpen={isSettingsOpen}
-          onClose={() => setIsSettingsOpen(false)}
-          warningThreshold={warningThreshold}
-          showChecklistInGantt={showChecklistInGantt}
-          onWarningThresholdChange={setWarningThreshold}
-          onShowChecklistChange={setShowChecklistInGantt}
-          cloudBackups={cloudBackups}
-          loadingBackups={loadingBackups}
-          onCreateCloudBackup={createCloudBackup}
-          onRestoreCloudBackup={restoreCloudBackup}
-          onExportData={exportData}
-          onImportClick={handleImportClick}
-          t={t}
-        />
+        {isSettingsOpen && (
+          <Suspense fallback={null}>
+            <SettingsModal
+              isOpen={isSettingsOpen}
+              onClose={() => setIsSettingsOpen(false)}
+              warningThreshold={warningThreshold}
+              showChecklistInGantt={showChecklistInGantt}
+              onWarningThresholdChange={setWarningThreshold}
+              onShowChecklistChange={setShowChecklistInGantt}
+              cloudBackups={cloudBackups}
+              loadingBackups={loadingBackups}
+              onCreateCloudBackup={createCloudBackup}
+              onRestoreCloudBackup={restoreCloudBackup}
+              onExportData={exportData}
+              onImportClick={handleImportClick}
+              t={t}
+            />
+          </Suspense>
+        )}
 
-        <ArchiveModal
-          isOpen={isArchiveOpen}
-          onClose={() => setIsArchiveOpen(false)}
-          archivedTasks={archivedTasks}
-          onRestore={restoreTaskStatus}
-          onDelete={deleteTask}
-          confirmDeleteId={confirmDeleteId}
-          onSetConfirmDeleteId={setConfirmDeleteId}
-          t={t}
-        />
+        {isArchiveOpen && (
+          <Suspense fallback={null}>
+            <ArchiveModal
+              isOpen={isArchiveOpen}
+              onClose={() => setIsArchiveOpen(false)}
+              archivedTasks={archivedTasks}
+              onRestore={restoreTaskStatus}
+              onDelete={deleteTask}
+              confirmDeleteId={confirmDeleteId}
+              onSetConfirmDeleteId={setConfirmDeleteId}
+              t={t}
+            />
+          </Suspense>
+        )}
 
-        <TrashModal
-          isOpen={isTrashOpen}
-          onClose={() => setIsTrashOpen(false)}
-          deletedTasks={deletedTasks}
-          onRestore={restoreTask}
-          onPermanentDelete={permanentDeleteTask}
-          confirmDeleteId={confirmDeleteId}
-          confirmEmptyTrash={confirmEmptyTrash}
-          onSetConfirmDeleteId={setConfirmDeleteId}
-          onSetConfirmEmptyTrash={setConfirmEmptyTrash}
-          onEmptyTrash={handleEmptyTrash}
-          t={t}
-        />
+        {isTrashOpen && (
+          <Suspense fallback={null}>
+            <TrashModal
+              isOpen={isTrashOpen}
+              onClose={() => setIsTrashOpen(false)}
+              deletedTasks={deletedTasks}
+              onRestore={restoreTask}
+              onPermanentDelete={permanentDeleteTask}
+              confirmDeleteId={confirmDeleteId}
+              confirmEmptyTrash={confirmEmptyTrash}
+              onSetConfirmDeleteId={setConfirmDeleteId}
+              onSetConfirmEmptyTrash={setConfirmEmptyTrash}
+              onEmptyTrash={handleEmptyTrash}
+              t={t}
+            />
+          </Suspense>
+        )}
 
         {/* Hidden file input */}
         <input
@@ -611,8 +694,10 @@ export default function App() {
           className="hidden"
           aria-label="Import file"
         />
+            </div>
+          );
+        })()}
       </div>
-    </div>
     </ErrorBoundary>
   );
 }

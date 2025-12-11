@@ -15,7 +15,7 @@ export const ErrorDisplay = memo(({ error, onRetry, t }) => {
           <p className="text-sm font-medium text-red-800 dark:text-red-200">
             {t('networkErrorRetry') || 'Network error. Click to retry.'}
           </p>
-          {process.env.NODE_ENV === 'development' && (
+          {import.meta.env.DEV && (
             <p className="text-xs text-red-600 dark:text-red-300 mt-1">
               {error.message || error.toString()}
             </p>

@@ -38,7 +38,7 @@ export class ErrorBoundary extends Component {
             <p className="text-gray-600 dark:text-gray-300 mb-4">
               {this.props.t ? this.props.t('errorBoundaryMessage') : 'Applikationen stötte på ett oväntat fel. Försök ladda om sidan.'}
             </p>
-            {process.env.NODE_ENV === 'development' && this.state.error && (
+            {import.meta.env.DEV && this.state.error && (
               <details className="mb-4">
                 <summary className="text-sm text-gray-500 dark:text-gray-400 cursor-pointer">
                   Teknisk information
