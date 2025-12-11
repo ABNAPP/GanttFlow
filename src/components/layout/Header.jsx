@@ -51,7 +51,7 @@ export const Header = memo(({
   return (
     <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-2 sm:px-4 py-2 sm:py-3 flex flex-col sm:flex-row justify-between items-start sm:items-center shadow-sm z-30 relative transition-colors duration-300 w-full">
       {/* Top Row - Always Visible - Scrollable on Mobile */}
-      <div className="flex items-center w-full gap-2 sm:gap-4 overflow-x-auto sm:overflow-x-visible sm:justify-between scrollbar-hide min-w-0">
+      <div className="flex items-center gap-2 sm:gap-4 overflow-x-auto sm:overflow-x-visible sm:justify-between scrollbar-hide w-full sm:w-auto" style={{ minWidth: 'max-content' }}>
         {/* Left Side - Logo, Title, Sidebar Toggle */}
         <div className="flex items-center gap-2 flex-shrink-0">
           <button

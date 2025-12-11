@@ -503,7 +503,7 @@ export default function App() {
           const mode = user?.uid?.startsWith('demo-user-') ? 'LOCAL DEMO MODE' : (isDev ? 'LOCAL DEV' : 'PRODUCTION');
           console.log(`[UI] ${mode} - Rendering main app for user:`, user?.uid, user?.email);
           return (
-            <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-900 text-slate-900 dark:text-gray-100 font-sans overflow-hidden transition-colors duration-300">
+            <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-900 text-slate-900 dark:text-gray-100 font-sans overflow-hidden transition-colors duration-300" style={{ overflowY: 'hidden' }}>
         {/* Demo Mode Warning */}
         <DemoModeWarning user={user} t={t} />
         {/* Header */}

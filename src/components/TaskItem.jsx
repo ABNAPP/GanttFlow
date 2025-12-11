@@ -58,11 +58,12 @@ export const TaskItem = memo(({
               >
                 {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
               </button>
-              {(isOverdue || isWarning) && (
+              {isOverdue && (
                 <AlertTriangle
                   size={12}
-                  className={isOverdue ? 'text-red-500' : 'text-amber-500'}
-                  aria-label={isOverdue ? t('statusLate') : 'Warning'}
+                  className="text-red-500"
+                  aria-label={t('statusLate')}
+                  title={t('statusLate')}
                 />
               )}
               <h3
