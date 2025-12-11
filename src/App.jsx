@@ -24,6 +24,7 @@ const TaskModal = lazy(() => import('./components/modals/TaskModal').then(module
 const SettingsModal = lazy(() => import('./components/modals/SettingsModal').then(module => ({ default: module.SettingsModal })));
 const ArchiveModal = lazy(() => import('./components/modals/ArchiveModal').then(module => ({ default: module.ArchiveModal })));
 const TrashModal = lazy(() => import('./components/modals/TrashModal').then(module => ({ default: module.TrashModal })));
+const QuickListModal = lazy(() => import('./components/modals/QuickListModal').then(module => ({ default: module.QuickListModal })));
 
 // Utils & Config
 import { TRANSLATIONS } from './constants/translations';
@@ -83,6 +84,7 @@ export default function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isArchiveOpen, setIsArchiveOpen] = useState(false);
   const [isTrashOpen, setIsTrashOpen] = useState(false);
+  const [isQuickListOpen, setIsQuickListOpen] = useState(false);
   const [isDashboardOpen, setIsDashboardOpen] = useState(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('gantt-dashboard-open');
@@ -550,6 +552,8 @@ export default function App() {
           onDeleteView={handleDeleteView}
           zoomLevel={zoomLevel}
           onZoomChange={setZoomLevel}
+          user={user}
+          onOpenQuickList={() => setIsQuickListOpen(true)}
           t={t}
         />
 
@@ -628,6 +632,7 @@ export default function App() {
               onDelete={handleDeleteTask}
               warningThreshold={warningThreshold}
               t={t}
+              lang={lang}
             />
           </Suspense>
         )}
@@ -680,6 +685,17 @@ export default function App() {
               onSetConfirmDeleteId={setConfirmDeleteId}
               onSetConfirmEmptyTrash={setConfirmEmptyTrash}
               onEmptyTrash={handleEmptyTrash}
+              t={t}
+            />
+          </Suspense>
+        )}
+
+        {isQuickListOpen && (
+          <Suspense fallback={null}>
+            <QuickListModal
+              isOpen={isQuickListOpen}
+              onClose={() => setIsQuickListOpen(false)}
+              user={user}
               t={t}
             />
           </Suspense>

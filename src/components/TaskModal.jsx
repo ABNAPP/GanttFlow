@@ -28,7 +28,6 @@ export const TaskModal = memo(({
     startDate: formatDate(new Date()),
     endDate: formatDate(new Date(new Date().setDate(new Date().getDate() + 5))),
     status: 'Planerad',
-    description: '',
     checklist: [],
   });
 
@@ -57,7 +56,6 @@ export const TaskModal = memo(({
         startDate: task.startDate || formatDate(new Date()),
         endDate: task.endDate || formatDate(new Date()),
         status: task.status || 'Planerad',
-        description: task.description || '',
         checklist: task.checklist || [],
       });
     } else {
@@ -78,7 +76,6 @@ export const TaskModal = memo(({
         startDate: formatDate(today),
         endDate: formatDate(end),
         status: 'Planerad',
-        description: '',
         checklist: [],
       });
     }
@@ -456,8 +453,6 @@ export const TaskModal = memo(({
               {t('labelDesc')}
             </label>
             <textarea
-              value={formData.description}
-              onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
               className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg px-3 py-2 text-sm h-20 resize-none outline-none"
               aria-label={t('labelDesc')}
             />

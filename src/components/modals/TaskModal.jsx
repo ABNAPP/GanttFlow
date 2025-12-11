@@ -13,6 +13,7 @@ export const TaskModal = memo(({
   onDelete,
   warningThreshold,
   t,
+  lang = 'sv',
 }) => {
   const [formData, setFormData] = useState({
     client: '',
@@ -28,17 +29,18 @@ export const TaskModal = memo(({
     startDate: formatDate(new Date()),
     endDate: formatDate(new Date(new Date().setDate(new Date().getDate() + 5))),
     status: 'Planerad',
-    description: '',
     checklist: [],
     tags: [],
-    priority: 'normal',
+    comments: [],
   });
+  const [newComment, setNewComment] = useState('');
 
   const [newChecklistItem, setNewChecklistItem] = useState('');
   const [newTag, setNewTag] = useState('');
   const [newChecklistStartDate, setNewChecklistStartDate] = useState('');
   const [newChecklistEndDate, setNewChecklistEndDate] = useState('');
   const [newChecklistExecutor, setNewChecklistExecutor] = useState('');
+  const [newChecklistPriority, setNewChecklistPriority] = useState('normal');
   const [editingChecklistId, setEditingChecklistId] = useState(null);
   const [tempChecklistData, setTempChecklistData] = useState({});
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
@@ -47,6 +49,7 @@ export const TaskModal = memo(({
   // Initialize form data when task changes
   useEffect(() => {
     if (task) {
+      console.log('[TaskModal] Loading task with comments:', task.comments);
       setFormData({
         client: task.client || '',
         title: task.title || '',
@@ -61,10 +64,9 @@ export const TaskModal = memo(({
         startDate: task.startDate || formatDate(new Date()),
         endDate: task.endDate || formatDate(new Date()),
         status: task.status || 'Planerad',
-        description: task.description || '',
         checklist: task.checklist || [],
         tags: task.tags || [],
-        priority: task.priority || 'normal',
+        comments: task.comments || [],
       });
     } else {
       const today = new Date();
@@ -84,17 +86,18 @@ export const TaskModal = memo(({
         startDate: formatDate(today),
         endDate: formatDate(end),
         status: 'Planerad',
-        description: '',
         checklist: [],
         tags: [],
-        priority: 'normal',
+        comments: [],
       });
     }
     setNewChecklistItem('');
     setNewChecklistStartDate('');
     setNewChecklistEndDate('');
     setNewChecklistExecutor('');
+    setNewChecklistPriority('normal');
     setEditingChecklistId(null);
+    setNewComment('');
     setIsDeleteConfirmOpen(false);
     setValidationErrors([]);
   }, [task, isOpen]);
@@ -108,6 +111,7 @@ export const TaskModal = memo(({
       startDate: newChecklistStartDate || null,
       endDate: newChecklistEndDate || null,
       executor: newChecklistExecutor || null,
+      priority: newChecklistPriority || 'normal',
     };
     setFormData((prev) => ({
       ...prev,
@@ -117,6 +121,7 @@ export const TaskModal = memo(({
     setNewChecklistStartDate('');
     setNewChecklistEndDate('');
     setNewChecklistExecutor('');
+    setNewChecklistPriority('normal');
   };
 
   const toggleChecklist = (id) => {
@@ -139,6 +144,7 @@ export const TaskModal = memo(({
       startDate: item.startDate || '',
       endDate: item.endDate || '',
       executor: item.executor || '',
+      priority: item.priority || 'normal',
     });
   };
 
@@ -151,6 +157,7 @@ export const TaskModal = memo(({
           startDate: tempChecklistData.startDate || null,
           endDate: tempChecklistData.endDate || null,
           executor: tempChecklistData.executor || null,
+          priority: tempChecklistData.priority || 'normal',
         };
       }
       return item;
@@ -165,6 +172,33 @@ export const TaskModal = memo(({
     setTempChecklistData({});
   };
 
+  const handleAddComment = () => {
+    if (!newComment.trim()) return;
+    const comment = {
+      id: generateId(),
+      text: newComment.trim(),
+      createdAt: new Date().toISOString(),
+      author: 'User', // Could be enhanced with actual user info
+    };
+    console.log('[TaskModal] Adding comment:', comment);
+    setFormData((prev) => {
+      const updated = {
+        ...prev,
+        comments: [...(prev.comments || []), comment],
+      };
+      console.log('[TaskModal] Updated formData with comments:', updated.comments);
+      return updated;
+    });
+    setNewComment('');
+  };
+
+  const handleDeleteComment = (commentId) => {
+    setFormData((prev) => ({
+      ...prev,
+      comments: (prev.comments || []).filter((c) => c.id !== commentId),
+    }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -176,6 +210,7 @@ export const TaskModal = memo(({
     }
 
     setValidationErrors([]);
+    console.log('[TaskModal] Submitting formData with comments:', formData.comments);
     try {
       await onSave(formData);
       // Only show success if onSave didn't throw an error
@@ -285,21 +320,6 @@ export const TaskModal = memo(({
                 <option value="Pågående">{t('statusProg')}</option>
                 <option value="Klar">{t('statusDone')}</option>
                 <option value="Försenad">{t('statusLate')}</option>
-              </select>
-            </div>
-            <div className="col-span-1 sm:col-span-1 md:col-span-1">
-              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">
-                {t('labelPriority')}
-              </label>
-              <select
-                value={formData.priority}
-                onChange={(e) => setFormData((prev) => ({ ...prev, priority: e.target.value }))}
-                className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg px-3 py-2 text-sm outline-none"
-                aria-label={t('labelPriority')}
-              >
-                <option value="low">{t('priorityLow')}</option>
-                <option value="normal">{t('priorityNormal')}</option>
-                <option value="high">{t('priorityHigh')}</option>
               </select>
             </div>
           </div>
@@ -467,6 +487,7 @@ export const TaskModal = memo(({
                     onStartDateChange={(date) => setTempChecklistData((prev) => ({ ...prev, startDate: date }))}
                     onEndDateChange={(date) => setTempChecklistData((prev) => ({ ...prev, endDate: date }))}
                     onExecutorChange={(executor) => setTempChecklistData((prev) => ({ ...prev, executor }))}
+                    onPriorityChange={(priority) => setTempChecklistData((prev) => ({ ...prev, priority }))}
                     t={t}
                   />
                 </div>
@@ -524,6 +545,17 @@ export const TaskModal = memo(({
                   className="border border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-900/40 rounded px-2 py-1 outline-none text-gray-700 dark:text-gray-300 text-xs"
                   aria-label={t('statExecutor')}
                 />
+                <label className="text-gray-500 dark:text-gray-400 ml-2">{t('labelPriority')}:</label>
+                <select
+                  value={newChecklistPriority}
+                  onChange={(e) => setNewChecklistPriority(e.target.value)}
+                  className="border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded px-2 py-1 outline-none text-gray-600 dark:text-gray-300 text-xs"
+                  aria-label={t('labelPriority')}
+                >
+                  <option value="low">{t('priorityLow')}</option>
+                  <option value="normal">{t('priorityNormal')}</option>
+                  <option value="high">{t('priorityHigh')}</option>
+                </select>
               </div>
             </div>
           </div>
@@ -557,16 +589,81 @@ export const TaskModal = memo(({
             </div>
           </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">
-              {t('labelDesc')}
-            </label>
-            <textarea
-              value={formData.description}
-              onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
-              className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg px-3 py-2 text-sm h-20 resize-none outline-none"
-              aria-label={t('labelDesc')}
-            />
+          {/* Comments Section - Always visible */}
+          <div className="p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg border-2 border-indigo-200 dark:border-indigo-800">
+            <div className="flex items-center gap-2 mb-3">
+              <h3 className="text-xs font-bold text-indigo-700 dark:text-indigo-300 uppercase">{t('labelComments')}</h3>
+              {formData.comments && formData.comments.length > 0 && (
+                <span className="text-xs bg-indigo-200 dark:bg-indigo-800 text-indigo-700 dark:text-indigo-300 px-2 py-0.5 rounded-full">
+                  {formData.comments.length}
+                </span>
+              )}
+            </div>
+            
+            {/* Comments List */}
+            {formData.comments && formData.comments.length > 0 ? (
+              <div className="space-y-3 mb-4 max-h-48 overflow-y-auto">
+                {formData.comments.map((comment) => (
+                  <div
+                    key={comment.id}
+                    className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-600 shadow-sm"
+                  >
+                    <div className="flex items-start justify-between gap-2 mb-1">
+                      <div className="flex-1">
+                        <p className="text-sm text-gray-700 dark:text-gray-200">{comment.text}</p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                          {comment.author} • {new Date(comment.createdAt).toLocaleString(lang === 'sv' ? 'sv-SE' : 'en-US')}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteComment(comment.id)}
+                        className="p-1 text-gray-400 hover:text-red-500 transition-colors flex-shrink-0"
+                        aria-label={t('deleteComment')}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="mb-4 p-3 bg-white dark:bg-gray-800 rounded-lg border border-dashed border-gray-300 dark:border-gray-600">
+                <p className="text-sm text-gray-400 dark:text-gray-500 text-center">{t('noComments')}</p>
+              </div>
+            )}
+
+            {/* Add Comment - Always visible */}
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                <textarea
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                      e.preventDefault();
+                      handleAddComment();
+                    }
+                  }}
+                  placeholder={t('commentPlaceholder')}
+                  className="flex-1 border-2 border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg px-3 py-2 text-sm resize-none outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 dark:focus:ring-indigo-800"
+                  rows="2"
+                  aria-label={t('commentPlaceholder')}
+                />
+                <button
+                  type="button"
+                  onClick={handleAddComment}
+                  disabled={!newComment.trim()}
+                  className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg text-sm flex items-center gap-1 flex-shrink-0 transition-colors"
+                  aria-label={t('addComment')}
+                >
+                  <Plus size={16} />
+                </button>
+              </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400 italic">
+                {lang === 'sv' ? '💡 Tryck Ctrl+Enter för att lägga till snabbt' : '💡 Press Ctrl+Enter to add quickly'}
+              </p>
+            </div>
           </div>
 
           <div className="flex justify-between pt-2 items-center">

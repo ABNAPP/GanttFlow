@@ -87,7 +87,6 @@ export const validateTask = (data, id) => {
     startDate: typeof data.startDate === 'string' ? data.startDate : '',
     endDate: typeof data.endDate === 'string' ? data.endDate : '',
     status,
-    description: typeof data.description === 'string' ? data.description : '',
     checklist,
     tags,
     priority,

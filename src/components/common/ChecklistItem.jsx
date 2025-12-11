@@ -16,6 +16,7 @@ export const ChecklistItem = memo(({
   onStartDateChange,
   onEndDateChange,
   onExecutorChange,
+  onPriorityChange,
   warningThreshold,
   t,
 }) => {
@@ -55,6 +56,16 @@ export const ChecklistItem = memo(({
             className="flex-1 min-w-[120px] border border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-900/40 rounded px-2 py-1 text-xs text-gray-700 dark:text-gray-300"
             aria-label={t('statExecutor')}
           />
+          <select
+            value={tempData.priority || 'normal'}
+            onChange={(e) => onPriorityChange && onPriorityChange(e.target.value)}
+            className="flex-1 min-w-[100px] border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded px-2 py-1 text-xs text-gray-700 dark:text-gray-300"
+            aria-label={t('labelPriority')}
+          >
+            <option value="low">{t('priorityLow')}</option>
+            <option value="normal">{t('priorityNormal')}</option>
+            <option value="high">{t('priorityHigh')}</option>
+          </select>
         </div>
         <div className="flex justify-end gap-2 mt-1">
           <button
@@ -101,6 +112,21 @@ export const ChecklistItem = memo(({
             title={subStatus.isOverdue ? t('statusLate') : t('approachingDeadline')}
             className={`mt-0.5 flex-shrink-0 ${subStatus.isOverdue ? 'text-red-500' : 'text-amber-500'}`}
             aria-label={subStatus.isOverdue ? t('statusLate') : t('warning')}
+          />
+        )}
+
+        {/* Priority indicator */}
+        {item.priority && (
+          <span
+            className={`w-2 h-2 rounded-full flex-shrink-0 ${
+              item.priority === 'high'
+                ? 'bg-red-500'
+                : item.priority === 'normal'
+                ? 'bg-blue-500'
+                : 'bg-green-500'
+            }`}
+            title={t(`priority${item.priority.charAt(0).toUpperCase() + item.priority.slice(1)}`)}
+            aria-label={t(`priority${item.priority.charAt(0).toUpperCase() + item.priority.slice(1)}`)}
           />
         )}
 

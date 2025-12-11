@@ -36,7 +36,6 @@
  * @property {string} startDate - Start date (YYYY-MM-DD)
  * @property {string} endDate - End date (YYYY-MM-DD)
  * @property {TaskStatus} status - Task status
- * @property {string} [description] - Task description
  * @property {ChecklistItem[]} [checklist] - Subtasks/checklist items
  * @property {string[]} [tags] - Tags array
  * @property {Priority} [priority] - Priority level

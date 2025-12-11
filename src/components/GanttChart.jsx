@@ -193,7 +193,7 @@ export const GanttChart = memo(({
                             onTaskClick(task);
                           }
                         }}
-                        title={`${task.title}\n${task.startDate} -> ${task.endDate}\n${task.description}`}
+                        title={`${task.title}\n${task.startDate} -> ${task.endDate}`}
                         role="button"
                         tabIndex={0}
                         aria-label={`Task: ${task.title}`}

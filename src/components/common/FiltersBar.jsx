@@ -1,6 +1,7 @@
 // FiltersBar component for advanced filtering
 import { memo, useState } from 'react';
-import { Filter, X, Save, Trash2 } from 'lucide-react';
+import { Filter, X, Save, Trash2, Bell } from 'lucide-react';
+import { useQuickList } from '../../hooks/useQuickList';
 
 export const FiltersBar = memo(({
   tasks,
@@ -13,8 +14,13 @@ export const FiltersBar = memo(({
   onDeleteView,
   zoomLevel,
   onZoomChange,
+  user,
+  onOpenQuickList,
   t,
 }) => {
+  // Get quick list items to show count
+  const { items: quickListItems } = useQuickList(user);
+  const activeQuickListCount = quickListItems.filter(item => !item.done).length;
   const [showFilters, setShowFilters] = useState(false);
   const [showSaveView, setShowSaveView] = useState(false);
   const [viewName, setViewName] = useState('');
@@ -113,6 +119,25 @@ export const FiltersBar = memo(({
             <Save size={14} />
             <span className="hidden sm:inline">{t('saveView')}</span>
           </button>
+
+          {/* Quick List Button */}
+          {user && onOpenQuickList && (
+            <button
+              onClick={onOpenQuickList}
+              className="flex items-center gap-1 px-2 py-1.5 text-xs text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 border border-gray-200 dark:border-gray-600 rounded relative"
+              title={t('quickListTitle')}
+            >
+              <div className="relative">
+                <Bell size={14} />
+                {activeQuickListCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-1">
+                    {activeQuickListCount > 99 ? '99+' : activeQuickListCount}
+                  </span>
+                )}
+              </div>
+              <span className="hidden sm:inline">{t('quickList')}</span>
+            </button>
+          )}
         </div>
 
         {/* Save View Input */}

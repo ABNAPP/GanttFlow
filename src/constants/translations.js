@@ -231,6 +231,25 @@ export const TRANSLATIONS = {
     authErrorWeakPassword: 'Lösenordet är för svagt',
     authErrorInvalidEmail: 'Ogiltig e-postadress',
     authErrorGeneric: 'Ett fel uppstod. Försök igen.',
+    // Comments
+    labelComments: 'Kommentarer / Logg',
+    addComment: 'Lägg till kommentar',
+    commentPlaceholder: 'Skriv en kommentar...',
+    noComments: 'Inga kommentarer ännu',
+    deleteComment: 'Ta bort kommentar',
+    commentAdded: 'Kommentar tillagd',
+    commentDeleted: 'Kommentar borttagen',
+    // Quick List
+    quickList: 'Snabb-lista',
+    quickListTitle: 'Personlig snabb-lista',
+    quickListPlaceholder: 'Lägg till snabb uppgift...',
+    quickListEmpty: 'Inga snabba uppgifter',
+    addQuickItem: 'Lägg till',
+    // Dashboard Focus
+    todaysFocus: 'Dagens Fokus',
+    overdueTasks: 'Försenade uppgifter',
+    tasksStartingThisWeek: 'Uppgifter som startar denna vecka',
+    statusChart: 'Statusfördelning',
   },
   en: {
     title: 'Project Planning',
@@ -467,6 +486,25 @@ export const TRANSLATIONS = {
     authErrorWeakPassword: 'Password is too weak',
     authErrorInvalidEmail: 'Invalid email address',
     authErrorGeneric: 'An error occurred. Please try again.',
+    // Comments
+    labelComments: 'Comments / Log',
+    addComment: 'Add comment',
+    commentPlaceholder: 'Write a comment...',
+    noComments: 'No comments yet',
+    deleteComment: 'Delete comment',
+    commentAdded: 'Comment added',
+    commentDeleted: 'Comment deleted',
+    // Quick List
+    quickList: 'Quick List',
+    quickListTitle: 'Personal Quick List',
+    quickListPlaceholder: 'Add quick task...',
+    quickListEmpty: 'No quick tasks',
+    addQuickItem: 'Add',
+    // Dashboard Focus
+    todaysFocus: 'Today\'s Focus',
+    overdueTasks: 'Overdue Tasks',
+    tasksStartingThisWeek: 'Tasks Starting This Week',
+    statusChart: 'Status Distribution',
   },
 };
 

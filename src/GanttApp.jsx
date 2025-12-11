@@ -587,6 +587,7 @@ export default function GanttApp() {
               onDelete={handleDeleteTask}
               warningThreshold={warningThreshold}
               t={t}
+              lang={lang}
             />
           </Suspense>
         )}

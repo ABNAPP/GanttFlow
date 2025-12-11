@@ -135,11 +135,215 @@ export const Dashboard = memo(({ tasks, t, onTaskClick, warningThreshold }) => {
     );
   }
 
+  // Calculate today's focus data
+  const todaysFocus = useMemo(() => {
+    if (!Array.isArray(tasks)) return { overdue: [], thisWeek: [], statusChart: [] };
+
+    const active = tasks.filter(t => !t.deleted && !checkIsDone(t.status));
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // Get start of week (Monday)
+    const startOfWeek = new Date(today);
+    const day = startOfWeek.getDay();
+    const diff = startOfWeek.getDate() - day + (day === 0 ? -6 : 1); // Adjust when day is Sunday
+    startOfWeek.setDate(diff);
+    startOfWeek.setHours(0, 0, 0, 0);
+    
+    // Get end of week (Sunday)
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6);
+    endOfWeek.setHours(23, 59, 59, 999);
+
+    // Overdue tasks
+    const overdue = active.filter(t => {
+      if (!t.endDate) return false;
+      const end = new Date(t.endDate);
+      return end < today;
+    });
+
+    // Tasks starting this week
+    const thisWeek = active.filter(t => {
+      if (!t.startDate) return false;
+      const start = new Date(t.startDate);
+      return start >= startOfWeek && start <= endOfWeek;
+    });
+
+    // Status distribution for pie chart
+    const statusCounts = active.reduce((acc, task) => {
+      const status = task.status || 'Planerad';
+      acc[status] = (acc[status] || 0) + 1;
+      return acc;
+    }, {});
+
+    const statusChart = [
+      { status: 'Klar', count: statusCounts['Klar'] || 0, color: '#10b981' },
+      { status: 'Pågående', count: statusCounts['Pågående'] || 0, color: '#3b82f6' },
+      { status: 'Planerad', count: statusCounts['Planerad'] || 0, color: '#9ca3af' },
+      { status: 'Försenad', count: statusCounts['Försenad'] || 0, color: '#ef4444' },
+    ].filter(item => item.count > 0);
+
+    return { overdue, thisWeek, statusChart };
+  }, [tasks]);
+
+  // Calculate pie chart angles
+  const pieChartData = useMemo(() => {
+    const total = todaysFocus.statusChart.reduce((sum, item) => sum + item.count, 0);
+    if (total === 0) return [];
+
+    let currentAngle = -90; // Start from top
+    return todaysFocus.statusChart.map(item => {
+      const percentage = (item.count / total) * 100;
+      const angle = (item.count / total) * 360;
+      const startAngle = currentAngle;
+      currentAngle += angle;
+      return {
+        ...item,
+        percentage,
+        startAngle,
+        angle,
+      };
+    });
+  }, [todaysFocus.statusChart]);
+
   return (
     <div className="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6">
       <div className="flex items-center gap-2 mb-3 sm:mb-4">
         <BarChart3 className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-600 dark:text-indigo-400" />
         <h2 className="text-lg sm:text-xl font-bold text-gray-800 dark:text-white">{t('dashboardTitle')}</h2>
+      </div>
+
+      {/* Today's Focus Section */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg p-4 sm:p-6 border border-gray-200 dark:border-gray-700 shadow-sm">
+        <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">{t('todaysFocus')}</h3>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Overdue Tasks */}
+          <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-4 border border-red-100 dark:border-red-800">
+            <div className="flex items-center gap-2 mb-2">
+              <AlertTriangle className="w-5 h-5 text-red-500" />
+              <h4 className="font-semibold text-red-700 dark:text-red-400">{t('overdueTasks')}</h4>
+            </div>
+            {todaysFocus.overdue.length === 0 ? (
+              <p className="text-sm text-gray-600 dark:text-gray-400">{t('noTasks')}</p>
+            ) : (
+              <div className="space-y-2">
+                {todaysFocus.overdue.slice(0, 5).map((task) => (
+                  <button
+                    key={task.id}
+                    onClick={() => onTaskClick(task)}
+                    className="w-full text-left text-sm text-red-700 dark:text-red-400 hover:underline truncate"
+                  >
+                    {task.title}
+                  </button>
+                ))}
+                {todaysFocus.overdue.length > 5 && (
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    +{todaysFocus.overdue.length - 5} {t('tasks')}
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Tasks Starting This Week */}
+          <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-100 dark:border-blue-800">
+            <div className="flex items-center gap-2 mb-2">
+              <Calendar className="w-5 h-5 text-blue-500" />
+              <h4 className="font-semibold text-blue-700 dark:text-blue-400">{t('tasksStartingThisWeek')}</h4>
+            </div>
+            {todaysFocus.thisWeek.length === 0 ? (
+              <p className="text-sm text-gray-600 dark:text-gray-400">{t('noTasks')}</p>
+            ) : (
+              <div className="space-y-2">
+                {todaysFocus.thisWeek.slice(0, 5).map((task) => (
+                  <button
+                    key={task.id}
+                    onClick={() => onTaskClick(task)}
+                    className="w-full text-left text-sm text-blue-700 dark:text-blue-400 hover:underline truncate"
+                  >
+                    <div className="truncate">{task.title}</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                      {task.startDate}
+                    </div>
+                  </button>
+                ))}
+                {todaysFocus.thisWeek.length > 5 && (
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    +{todaysFocus.thisWeek.length - 5} {t('tasks')}
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Status Chart */}
+          <div className="bg-gray-50 dark:bg-gray-700/30 rounded-lg p-4 border border-gray-100 dark:border-gray-700">
+            <div className="flex items-center gap-2 mb-2">
+              <BarChart3 className="w-5 h-5 text-indigo-500" />
+              <h4 className="font-semibold text-gray-700 dark:text-gray-300">{t('statusChart')}</h4>
+            </div>
+            {pieChartData.length === 0 ? (
+              <p className="text-sm text-gray-600 dark:text-gray-400">{t('noData')}</p>
+            ) : (
+              <div className="flex items-center gap-4">
+                <svg width="80" height="80" viewBox="0 0 80 80" className="flex-shrink-0">
+                  <circle
+                    cx="40"
+                    cy="40"
+                    r="30"
+                    fill="none"
+                    stroke="#e5e7eb"
+                    strokeWidth="20"
+                  />
+                  {pieChartData.map((item, idx) => {
+                    const radius = 30;
+                    const centerX = 40;
+                    const centerY = 40;
+                    const startAngleRad = (item.startAngle * Math.PI) / 180;
+                    const endAngleRad = ((item.startAngle + item.angle) * Math.PI) / 180;
+                    const largeArcFlag = item.angle > 180 ? 1 : 0;
+                    
+                    const x1 = centerX + radius * Math.cos(startAngleRad);
+                    const y1 = centerY + radius * Math.sin(startAngleRad);
+                    const x2 = centerX + radius * Math.cos(endAngleRad);
+                    const y2 = centerY + radius * Math.sin(endAngleRad);
+                    
+                    const pathData = [
+                      `M ${centerX} ${centerY}`,
+                      `L ${x1} ${y1}`,
+                      `A ${radius} ${radius} 0 ${largeArcFlag} 1 ${x2} ${y2}`,
+                      'Z',
+                    ].join(' ');
+                    
+                    return (
+                      <path
+                        key={idx}
+                        d={pathData}
+                        fill={item.color}
+                        stroke="#fff"
+                        strokeWidth="1"
+                      />
+                    );
+                  })}
+                </svg>
+                <div className="flex-1 space-y-1">
+                  {pieChartData.map((item, idx) => (
+                    <div key={idx} className="flex items-center gap-2 text-xs">
+                      <div
+                        className="w-3 h-3 rounded-full"
+                        style={{ backgroundColor: item.color }}
+                      />
+                      <span className="text-gray-600 dark:text-gray-400">
+                        {t(`status${item.status.charAt(0).toUpperCase() + item.status.slice(1).replace('å', 'a').replace('ä', 'a')}`)}: {item.count}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -274,9 +478,15 @@ export const Dashboard = memo(({ tasks, t, onTaskClick, warningThreshold }) => {
             const priorityCounts = { high: 0, normal: 0, low: 0 };
             tasks.forEach((task) => {
               if (task.deleted || checkIsDone(task.status)) return;
-              const priority = task.priority || 'normal';
-              if (priorityCounts.hasOwnProperty(priority)) {
-                priorityCounts[priority]++;
+              // Count priorities from checklist items instead of main task
+              if (task.checklist && task.checklist.length > 0) {
+                task.checklist.forEach((item) => {
+                  if (item.done) return; // Skip completed items
+                  const priority = item.priority || 'normal';
+                  if (priorityCounts.hasOwnProperty(priority)) {
+                    priorityCounts[priority]++;
+                  }
+                });
               }
             });
             const total = priorityCounts.high + priorityCounts.normal + priorityCounts.low;
@@ -294,8 +504,13 @@ export const Dashboard = memo(({ tasks, t, onTaskClick, warningThreshold }) => {
                       const counts = { high: 0, normal: 0, low: 0 };
                       tasks.forEach((task) => {
                         if (task.deleted || checkIsDone(task.status)) return;
-                        const priority = task.priority || 'normal';
-                        if (counts.hasOwnProperty(priority)) counts[priority]++;
+                        if (task.checklist && task.checklist.length > 0) {
+                          task.checklist.forEach((item) => {
+                            if (item.done) return;
+                            const priority = item.priority || 'normal';
+                            if (counts.hasOwnProperty(priority)) counts[priority]++;
+                          });
+                        }
                       });
                       return counts.high;
                     }, [tasks])}
@@ -308,11 +523,17 @@ export const Dashboard = memo(({ tasks, t, onTaskClick, warningThreshold }) => {
                       width: `${
                         useMemo(() => {
                           const counts = { high: 0, normal: 0, low: 0 };
-                          const total = tasks.filter(t => !t.deleted && !checkIsDone(t.status)).length;
+                          let total = 0;
                           tasks.forEach((task) => {
                             if (task.deleted || checkIsDone(task.status)) return;
-                            const priority = task.priority || 'normal';
-                            if (counts.hasOwnProperty(priority)) counts[priority]++;
+                            if (task.checklist && task.checklist.length > 0) {
+                              task.checklist.forEach((item) => {
+                                if (item.done) return;
+                                total++;
+                                const priority = item.priority || 'normal';
+                                if (counts.hasOwnProperty(priority)) counts[priority]++;
+                              });
+                            }
                           });
                           return total > 0 ? (counts.high / total) * 100 : 0;
                         }, [tasks])}%`,
@@ -332,8 +553,13 @@ export const Dashboard = memo(({ tasks, t, onTaskClick, warningThreshold }) => {
                       const counts = { high: 0, normal: 0, low: 0 };
                       tasks.forEach((task) => {
                         if (task.deleted || checkIsDone(task.status)) return;
-                        const priority = task.priority || 'normal';
-                        if (counts.hasOwnProperty(priority)) counts[priority]++;
+                        if (task.checklist && task.checklist.length > 0) {
+                          task.checklist.forEach((item) => {
+                            if (item.done) return;
+                            const priority = item.priority || 'normal';
+                            if (counts.hasOwnProperty(priority)) counts[priority]++;
+                          });
+                        }
                       });
                       return counts.normal;
                     }, [tasks])}
@@ -346,11 +572,17 @@ export const Dashboard = memo(({ tasks, t, onTaskClick, warningThreshold }) => {
                       width: `${
                         useMemo(() => {
                           const counts = { high: 0, normal: 0, low: 0 };
-                          const total = tasks.filter(t => !t.deleted && !checkIsDone(t.status)).length;
+                          let total = 0;
                           tasks.forEach((task) => {
                             if (task.deleted || checkIsDone(task.status)) return;
-                            const priority = task.priority || 'normal';
-                            if (counts.hasOwnProperty(priority)) counts[priority]++;
+                            if (task.checklist && task.checklist.length > 0) {
+                              task.checklist.forEach((item) => {
+                                if (item.done) return;
+                                total++;
+                                const priority = item.priority || 'normal';
+                                if (counts.hasOwnProperty(priority)) counts[priority]++;
+                              });
+                            }
                           });
                           return total > 0 ? (counts.normal / total) * 100 : 0;
                         }, [tasks])}%`,
@@ -370,8 +602,13 @@ export const Dashboard = memo(({ tasks, t, onTaskClick, warningThreshold }) => {
                       const counts = { high: 0, normal: 0, low: 0 };
                       tasks.forEach((task) => {
                         if (task.deleted || checkIsDone(task.status)) return;
-                        const priority = task.priority || 'normal';
-                        if (counts.hasOwnProperty(priority)) counts[priority]++;
+                        if (task.checklist && task.checklist.length > 0) {
+                          task.checklist.forEach((item) => {
+                            if (item.done) return;
+                            const priority = item.priority || 'normal';
+                            if (counts.hasOwnProperty(priority)) counts[priority]++;
+                          });
+                        }
                       });
                       return counts.low;
                     }, [tasks])}
@@ -384,11 +621,17 @@ export const Dashboard = memo(({ tasks, t, onTaskClick, warningThreshold }) => {
                       width: `${
                         useMemo(() => {
                           const counts = { high: 0, normal: 0, low: 0 };
-                          const total = tasks.filter(t => !t.deleted && !checkIsDone(t.status)).length;
+                          let total = 0;
                           tasks.forEach((task) => {
                             if (task.deleted || checkIsDone(task.status)) return;
-                            const priority = task.priority || 'normal';
-                            if (counts.hasOwnProperty(priority)) counts[priority]++;
+                            if (task.checklist && task.checklist.length > 0) {
+                              task.checklist.forEach((item) => {
+                                if (item.done) return;
+                                total++;
+                                const priority = item.priority || 'normal';
+                                if (counts.hasOwnProperty(priority)) counts[priority]++;
+                              });
+                            }
                           });
                           return total > 0 ? (counts.low / total) * 100 : 0;
                         }, [tasks])}%`,
