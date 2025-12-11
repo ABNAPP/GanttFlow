@@ -173,66 +173,68 @@ export const Dashboard = memo(({ tasks, t, onTaskClick, warningThreshold }) => {
         </div>
       </div>
 
-      {/* Status Distribution */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700 shadow-sm">
-        <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">{t('statusDistribution')}</h3>
-        <div className="space-y-3">
-          <div>
-            <div className="flex justify-between text-sm mb-1">
-              <span className="text-gray-600 dark:text-gray-300">{t('planned')}</span>
-              <span className="font-semibold text-gray-800 dark:text-white">{stats.planned}</span>
+      {/* Status Distribution and Priority Distribution - Side by Side */}
+      <div className="grid grid-cols-1 md:grid-cols-[65%_35%] gap-4">
+        {/* Status Distribution */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700 shadow-sm">
+          <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">{t('statusDistribution')}</h3>
+          <div className="space-y-3">
+            <div>
+              <div className="flex justify-between text-sm mb-1">
+                <span className="text-gray-600 dark:text-gray-300">{t('planned')}</span>
+                <span className="font-semibold text-gray-800 dark:text-white">{stats.planned}</span>
+              </div>
+              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                <div
+                  className="bg-gray-400 h-2 rounded-full"
+                  style={{ width: `${stats.total > 0 ? (stats.planned / stats.total) * 100 : 0}%` }}
+                />
+              </div>
             </div>
-            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-              <div
-                className="bg-gray-400 h-2 rounded-full"
-                style={{ width: `${stats.total > 0 ? (stats.planned / stats.total) * 100 : 0}%` }}
-              />
-            </div>
-          </div>
 
-          <div>
-            <div className="flex justify-between text-sm mb-1">
-              <span className="text-gray-600 dark:text-gray-300">{t('inProgress')}</span>
-              <span className="font-semibold text-gray-800 dark:text-white">{stats.inProgress}</span>
+            <div>
+              <div className="flex justify-between text-sm mb-1">
+                <span className="text-gray-600 dark:text-gray-300">{t('inProgress')}</span>
+                <span className="font-semibold text-gray-800 dark:text-white">{stats.inProgress}</span>
+              </div>
+              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                <div
+                  className="bg-blue-500 h-2 rounded-full"
+                  style={{ width: `${stats.total > 0 ? (stats.inProgress / stats.total) * 100 : 0}%` }}
+                />
+              </div>
             </div>
-            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-              <div
-                className="bg-blue-500 h-2 rounded-full"
-                style={{ width: `${stats.total > 0 ? (stats.inProgress / stats.total) * 100 : 0}%` }}
-              />
-            </div>
-          </div>
 
-          <div>
-            <div className="flex justify-between text-sm mb-1">
-              <span className="text-gray-600 dark:text-gray-300">{t('done')}</span>
-              <span className="font-semibold text-gray-800 dark:text-white">{stats.done}</span>
+            <div>
+              <div className="flex justify-between text-sm mb-1">
+                <span className="text-gray-600 dark:text-gray-300">{t('done')}</span>
+                <span className="font-semibold text-gray-800 dark:text-white">{stats.done}</span>
+              </div>
+              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                <div
+                  className="bg-green-500 h-2 rounded-full"
+                  style={{ width: `${stats.total > 0 ? (stats.done / stats.total) * 100 : 0}%` }}
+                />
+              </div>
             </div>
-            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-              <div
-                className="bg-green-500 h-2 rounded-full"
-                style={{ width: `${stats.total > 0 ? (stats.done / stats.total) * 100 : 0}%` }}
-              />
-            </div>
-          </div>
 
-          <div>
-            <div className="flex justify-between text-sm mb-1">
-              <span className="text-gray-600 dark:text-gray-300">{t('overdue')}</span>
-              <span className="font-semibold text-gray-800 dark:text-white">{stats.overdue}</span>
-            </div>
-            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-              <div
-                className="bg-red-500 h-2 rounded-full"
-                style={{ width: `${stats.total > 0 ? (stats.overdue / stats.total) * 100 : 0}%` }}
-              />
+            <div>
+              <div className="flex justify-between text-sm mb-1">
+                <span className="text-gray-600 dark:text-gray-300">{t('overdue')}</span>
+                <span className="font-semibold text-gray-800 dark:text-white">{stats.overdue}</span>
+              </div>
+              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                <div
+                  className="bg-red-500 h-2 rounded-full"
+                  style={{ width: `${stats.total > 0 ? (stats.overdue / stats.total) * 100 : 0}%` }}
+                />
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Priority Distribution */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700 shadow-sm">
+        {/* Priority Distribution */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700 shadow-sm">
         <div className="flex items-center gap-2 mb-4">
           <TrendingUp className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
           <h3 className="text-lg font-semibold text-gray-800 dark:text-white">{t('priorityDistribution')}</h3>
@@ -367,6 +369,7 @@ export const Dashboard = memo(({ tasks, t, onTaskClick, warningThreshold }) => {
             </>
           )}
         </div>
+      </div>
       </div>
 
       {/* Active Tasks List */}
