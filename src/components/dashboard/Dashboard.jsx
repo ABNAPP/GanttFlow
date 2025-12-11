@@ -116,67 +116,67 @@ export const Dashboard = memo(({ tasks, t, onTaskClick, warningThreshold }) => {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center gap-2 mb-4">
-        <BarChart3 className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
-        <h2 className="text-xl font-bold text-gray-800 dark:text-white">{t('dashboardTitle')}</h2>
+    <div className="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6">
+      <div className="flex items-center gap-2 mb-3 sm:mb-4">
+        <BarChart3 className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-600 dark:text-indigo-400" />
+        <h2 className="text-lg sm:text-xl font-bold text-gray-800 dark:text-white">{t('dashboardTitle')}</h2>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-4">
+        <div className="bg-white dark:bg-gray-800 rounded-lg p-3 sm:p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
           <div className="flex items-center gap-2 mb-2">
-            <Calendar className="w-4 h-4 text-gray-500" />
-            <span className="text-xs text-gray-500 dark:text-gray-400 uppercase">{t('total')}</span>
+            <Calendar className="w-3 h-3 sm:w-4 sm:h-4 text-gray-500" />
+            <span className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 uppercase">{t('total')}</span>
           </div>
-          <div className="text-2xl font-bold text-gray-800 dark:text-white">{stats.total}</div>
+          <div className="text-xl sm:text-2xl font-bold text-gray-800 dark:text-white">{stats.total}</div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
+        <div className="bg-white dark:bg-gray-800 rounded-lg p-3 sm:p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
           <div className="flex items-center gap-2 mb-2">
-            <Clock className="w-4 h-4 text-blue-500" />
-            <span className="text-xs text-gray-500 dark:text-gray-400 uppercase">{t('active')}</span>
+            <Clock className="w-3 h-3 sm:w-4 sm:h-4 text-blue-500" />
+            <span className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 uppercase">{t('active')}</span>
           </div>
-          <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{stats.active}</div>
+          <div className="text-xl sm:text-2xl font-bold text-blue-600 dark:text-blue-400">{stats.active}</div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
+        <div className="bg-white dark:bg-gray-800 rounded-lg p-3 sm:p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
           <div className="flex items-center gap-2 mb-2">
-            <CheckCircle className="w-4 h-4 text-green-500" />
-            <span className="text-xs text-gray-500 dark:text-gray-400 uppercase">{t('done')}</span>
+            <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 text-green-500" />
+            <span className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 uppercase">{t('done')}</span>
           </div>
-          <div className="text-2xl font-bold text-green-600 dark:text-green-400">{stats.done}</div>
+          <div className="text-xl sm:text-2xl font-bold text-green-600 dark:text-green-400">{stats.done}</div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
+        <div className="bg-white dark:bg-gray-800 rounded-lg p-3 sm:p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
           <div className="flex items-center gap-2 mb-2">
-            <AlertTriangle className="w-4 h-4 text-red-500" />
-            <span className="text-xs text-gray-500 dark:text-gray-400 uppercase">{t('overdue')}</span>
+            <AlertTriangle className="w-3 h-3 sm:w-4 sm:h-4 text-red-500" />
+            <span className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 uppercase">{t('overdue')}</span>
           </div>
-          <div className="text-2xl font-bold text-red-600 dark:text-red-400">{stats.overdue}</div>
+          <div className="text-xl sm:text-2xl font-bold text-red-600 dark:text-red-400">{stats.overdue}</div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
+        <div className="bg-white dark:bg-gray-800 rounded-lg p-3 sm:p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
           <div className="flex items-center gap-2 mb-2">
-            <Clock className="w-4 h-4 text-gray-500" />
-            <span className="text-xs text-gray-500 dark:text-gray-400 uppercase">{t('planned')}</span>
+            <Clock className="w-3 h-3 sm:w-4 sm:h-4 text-gray-500" />
+            <span className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 uppercase">{t('planned')}</span>
           </div>
-          <div className="text-2xl font-bold text-gray-600 dark:text-gray-400">{stats.planned}</div>
+          <div className="text-xl sm:text-2xl font-bold text-gray-600 dark:text-gray-400">{stats.planned}</div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
+        <div className="bg-white dark:bg-gray-800 rounded-lg p-3 sm:p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
           <div className="flex items-center gap-2 mb-2">
-            <Clock className="w-4 h-4 text-indigo-500" />
-            <span className="text-xs text-gray-500 dark:text-gray-400 uppercase">{t('inProgress')}</span>
+            <Clock className="w-3 h-3 sm:w-4 sm:h-4 text-indigo-500" />
+            <span className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 uppercase">{t('inProgress')}</span>
           </div>
-          <div className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">{stats.inProgress}</div>
+          <div className="text-xl sm:text-2xl font-bold text-indigo-600 dark:text-indigo-400">{stats.inProgress}</div>
         </div>
       </div>
 
       {/* Status Distribution and Priority Distribution - Side by Side */}
-      <div className="grid grid-cols-1 md:grid-cols-[65%_35%] gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-[65%_35%] gap-3 sm:gap-4">
         {/* Status Distribution */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700 shadow-sm">
+        <div className="bg-white dark:bg-gray-800 rounded-lg p-4 sm:p-6 border border-gray-200 dark:border-gray-700 shadow-sm">
           <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">{t('statusDistribution')}</h3>
           <div className="space-y-3">
             <div>
@@ -234,7 +234,7 @@ export const Dashboard = memo(({ tasks, t, onTaskClick, warningThreshold }) => {
         </div>
 
         {/* Priority Distribution */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700 shadow-sm">
+        <div className="bg-white dark:bg-gray-800 rounded-lg p-4 sm:p-6 border border-gray-200 dark:border-gray-700 shadow-sm">
         <div className="flex items-center gap-2 mb-4">
           <TrendingUp className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
           <h3 className="text-lg font-semibold text-gray-800 dark:text-white">{t('priorityDistribution')}</h3>
@@ -373,7 +373,7 @@ export const Dashboard = memo(({ tasks, t, onTaskClick, warningThreshold }) => {
       </div>
 
       {/* Active Tasks List */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700 shadow-sm">
+      <div className="bg-white dark:bg-gray-800 rounded-lg p-4 sm:p-6 border border-gray-200 dark:border-gray-700 shadow-sm">
         <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">{t('activeTasks')}</h3>
         {stats.active === 0 ? (
           <div className="text-center text-gray-400 dark:text-gray-500 py-8">
@@ -529,7 +529,7 @@ export const Dashboard = memo(({ tasks, t, onTaskClick, warningThreshold }) => {
       </div>
 
       {/* Workload Section */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700 shadow-sm">
+      <div className="bg-white dark:bg-gray-800 rounded-lg p-4 sm:p-6 border border-gray-200 dark:border-gray-700 shadow-sm">
         <div className="flex items-center gap-2 mb-4">
           <Users className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
           <h3 className="text-lg font-semibold text-gray-800 dark:text-white">{t('workload')}</h3>
@@ -581,7 +581,7 @@ export const Dashboard = memo(({ tasks, t, onTaskClick, warningThreshold }) => {
       </div>
 
       {/* Phase Distribution */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700 shadow-sm">
+      <div className="bg-white dark:bg-gray-800 rounded-lg p-4 sm:p-6 border border-gray-200 dark:border-gray-700 shadow-sm">
         <div className="flex items-center gap-2 mb-4">
           <Layers className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
           <h3 className="text-lg font-semibold text-gray-800 dark:text-white">{t('phaseDistribution')}</h3>

@@ -49,9 +49,9 @@ export const FiltersBar = memo(({
   );
 
   return (
-    <div className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-2">
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-2 flex-1">
+    <div className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-2 sm:px-4 py-2">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-4">
+        <div className="flex items-center gap-2 flex-1 w-full sm:w-auto">
           <button
             onClick={() => setShowFilters(!showFilters)}
             className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
@@ -83,7 +83,7 @@ export const FiltersBar = memo(({
 
           {/* Saved Views */}
           {savedViews && savedViews.length > 0 && (
-            <div className="flex items-center gap-1 border-l border-gray-300 dark:border-gray-600 pl-3">
+            <div className="flex items-center gap-1 border-l border-gray-300 dark:border-gray-600 pl-2 sm:pl-3 hidden sm:flex">
               <select
                 onChange={(e) => {
                   if (e.target.value) {
@@ -117,7 +117,7 @@ export const FiltersBar = memo(({
 
         {/* Save View Input */}
         {showSaveView && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 w-full sm:w-auto">
             <input
               type="text"
               value={viewName}
@@ -148,7 +148,7 @@ export const FiltersBar = memo(({
 
       {/* Filter Dropdowns */}
       {showFilters && (
-        <div className="mt-3 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+        <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
           {/* Client Filter */}
           <div>
             <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">

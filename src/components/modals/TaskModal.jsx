@@ -215,7 +215,7 @@ export const TaskModal = memo(({
       aria-labelledby="modal-title"
     >
       <div
-        className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 border border-gray-200 dark:border-gray-700"
+        className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-[95vw] sm:max-w-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 border border-gray-200 dark:border-gray-700"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-between items-center px-6 py-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
@@ -237,10 +237,10 @@ export const TaskModal = memo(({
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto dark:text-gray-200">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 max-h-[80vh] overflow-y-auto dark:text-gray-200">
           {/* Client & Title */}
-          <div className="grid grid-cols-4 gap-4">
-            <div className="col-span-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+            <div className="col-span-1 sm:col-span-2 md:col-span-4">
               <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">
                 {t('labelClient')}
               </label>
@@ -253,7 +253,7 @@ export const TaskModal = memo(({
                 aria-label={t('labelClient')}
               />
             </div>
-            <div className="col-span-3">
+            <div className="col-span-1 sm:col-span-2 md:col-span-3">
               <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">
                 {t('labelTitle')}
               </label>
@@ -268,7 +268,7 @@ export const TaskModal = memo(({
                 aria-required="true"
               />
             </div>
-            <div>
+            <div className="col-span-1 sm:col-span-1">
               <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">
                 {t('labelStatus')}
               </label>
@@ -284,7 +284,7 @@ export const TaskModal = memo(({
                 <option value="Försenad">{t('statusLate')}</option>
               </select>
             </div>
-            <div>
+            <div className="col-span-1 sm:col-span-1 md:col-span-1">
               <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">
                 {t('labelPriority')}
               </label>
@@ -395,7 +395,7 @@ export const TaskModal = memo(({
 
           <div className="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg border border-gray-100 dark:border-gray-700">
             <h3 className="text-xs font-bold text-gray-400 uppercase mb-3">{t('labelDates')}</h3>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div>
                 <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">
                   {t('labelStart')}
@@ -528,7 +528,7 @@ export const TaskModal = memo(({
           {/* Roles */}
           <div className="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg border border-gray-100 dark:border-gray-700">
             <h3 className="text-xs font-bold text-gray-400 uppercase mb-3">{t('labelRoles')}</h3>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
               {[
                 { key: 'assignee', label: 'UA' },
                 { key: 'cad', label: 'CAD' },
