@@ -1,6 +1,6 @@
 import { memo, useMemo, useState } from 'react';
 import { BarChart3, CheckCircle, Clock, AlertTriangle, Calendar, Filter, Users, Layers, Tag, TrendingUp, ChevronDown, ChevronRight } from 'lucide-react';
-import { checkIsDone, calculateChecklistProgress } from '../../utils/helpers';
+import { checkIsDone, calculateChecklistProgress, hasOverdueChecklistItems, getTimeStatus } from '../../utils/helpers';
 import { WorkloadTasksModal } from '../modals/WorkloadTasksModal';
 
 export const Dashboard = memo(({ tasks, t, onTaskClick, warningThreshold }) => {
@@ -12,13 +12,31 @@ export const Dashboard = memo(({ tasks, t, onTaskClick, warningThreshold }) => {
 
     const active = tasks.filter(t => !t.deleted && !checkIsDone(t.status));
     const done = tasks.filter(t => !t.deleted && checkIsDone(t.status));
-    const overdue = active.filter(t => {
+    
+    // Försenade projekt (huvuduppgifter)
+    const overdueProjects = active.filter(t => {
       if (!t.endDate) return false;
       const end = new Date(t.endDate);
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       return end < today;
     });
+    
+    // Försenade deluppgifter (checklist items)
+    let overdueSubtasksCount = 0;
+    tasks.forEach(task => {
+      if (task.checklist && task.checklist.length > 0) {
+        task.checklist.forEach(item => {
+          if (!item.done) {
+            const status = getTimeStatus(item, warningThreshold);
+            if (status.isOverdue) {
+              overdueSubtasksCount++;
+            }
+          }
+        });
+      }
+    });
+    
     const planned = active.filter(t => (t.status || '').toLowerCase().includes('planerad') || (t.status || '').toLowerCase().includes('planned'));
     const inProgress = active.filter(t => (t.status || '').toLowerCase().includes('pågående') || (t.status || '').toLowerCase().includes('progress'));
 
@@ -26,11 +44,13 @@ export const Dashboard = memo(({ tasks, t, onTaskClick, warningThreshold }) => {
       total: tasks.filter(t => !t.deleted).length,
       active: active.length,
       done: done.length,
-      overdue: overdue.length,
+      overdue: overdueProjects.length, // Keep for backward compatibility
+      overdueProjects: overdueProjects.length,
+      overdueSubtasks: overdueSubtasksCount,
       planned: planned.length,
       inProgress: inProgress.length,
     };
-  }, [tasks]);
+  }, [tasks, warningThreshold]);
 
   // Calculate workload stats for all roles
   const workloadByRole = useMemo(() => {
@@ -148,12 +168,22 @@ export const Dashboard = memo(({ tasks, t, onTaskClick, warningThreshold }) => {
           <div className="text-xl sm:text-2xl font-bold text-green-600 dark:text-green-400">{stats.done}</div>
         </div>
 
+        {/* Försenade projekt */}
         <div className="bg-white dark:bg-gray-800 rounded-lg p-3 sm:p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
           <div className="flex items-center gap-2 mb-2">
             <AlertTriangle className="w-3 h-3 sm:w-4 sm:h-4 text-red-500" />
-            <span className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 uppercase">{t('overdue')}</span>
+            <span className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 uppercase">{t('overdueProjects')}</span>
           </div>
-          <div className="text-xl sm:text-2xl font-bold text-red-600 dark:text-red-400">{stats.overdue}</div>
+          <div className="text-xl sm:text-2xl font-bold text-red-600 dark:text-red-400">{stats.overdueProjects}</div>
+        </div>
+
+        {/* Försenade deluppgifter */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg p-3 sm:p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
+          <div className="flex items-center gap-2 mb-2">
+            <AlertTriangle className="w-3 h-3 sm:w-4 sm:h-4 text-orange-500" />
+            <span className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 uppercase">{t('overdueSubtasks')}</span>
+          </div>
+          <div className="text-xl sm:text-2xl font-bold text-orange-600 dark:text-orange-400">{stats.overdueSubtasks}</div>
         </div>
 
         <div className="bg-white dark:bg-gray-800 rounded-lg p-3 sm:p-4 border border-gray-200 dark:border-gray-700 shadow-sm">

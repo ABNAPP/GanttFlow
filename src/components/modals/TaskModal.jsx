@@ -24,6 +24,7 @@ export const TaskModal = memo(({
     agent: '',
     be: '',
     pl: '',
+    other: '',
     startDate: formatDate(new Date()),
     endDate: formatDate(new Date(new Date().setDate(new Date().getDate() + 5))),
     status: 'Planerad',
@@ -56,6 +57,7 @@ export const TaskModal = memo(({
         agent: task.agent || '',
         be: task.be || '',
         pl: task.pl || '',
+        other: task.other || '',
         startDate: task.startDate || formatDate(new Date()),
         endDate: task.endDate || formatDate(new Date()),
         status: task.status || 'Planerad',
@@ -78,6 +80,7 @@ export const TaskModal = memo(({
         agent: '',
         be: '',
         pl: '',
+        other: '',
         startDate: formatDate(today),
         endDate: formatDate(end),
         status: 'Planerad',
@@ -530,20 +533,21 @@ export const TaskModal = memo(({
             <h3 className="text-xs font-bold text-gray-400 uppercase mb-3">{t('labelRoles')}</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
               {[
-                { key: 'assignee', label: 'UA' },
-                { key: 'cad', label: 'CAD' },
-                { key: 'reviewer', label: 'G' },
-                { key: 'agent', label: 'O' },
-                { key: 'be', label: 'BE' },
-                { key: 'pl', label: 'PL' },
-              ].map(({ key, label }) => (
+                { key: 'assignee', label: t('labelRoleUA'), short: 'UA' },
+                { key: 'cad', label: t('labelRoleCAD'), short: 'CAD' },
+                { key: 'reviewer', label: t('labelRoleG'), short: 'G' },
+                { key: 'agent', label: t('labelRoleO'), short: 'O' },
+                { key: 'be', label: t('labelRoleBE'), short: 'BE' },
+                { key: 'pl', label: t('labelRolePL'), short: 'PL' },
+                { key: 'other', label: t('labelRoleOther'), short: t('roleOther') },
+              ].map(({ key, label, short }) => (
                 <div key={key}>
                   <label className="text-[10px] font-bold text-gray-500 dark:text-gray-400">
                     {label}
                   </label>
                   <input
                     type="text"
-                    value={formData[key]}
+                    value={formData[key] || ''}
                     onChange={(e) => setFormData((prev) => ({ ...prev, [key]: e.target.value }))}
                     className="w-full border border-gray-200 dark:border-gray-600 dark:bg-gray-700 rounded px-2 py-1 text-sm"
                     aria-label={label}

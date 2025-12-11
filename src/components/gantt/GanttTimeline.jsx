@@ -1,6 +1,6 @@
 import { useMemo, memo, useCallback } from 'react';
 import { ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react';
-import { getDaysArray, getTimeStatus, calculateChecklistProgress, isRedDay, getStatusColor } from '../../utils/helpers';
+import { getDaysArray, getTimeStatus, calculateChecklistProgress, isRedDay, getStatusColor, getTaskOverallStatus } from '../../utils/helpers';
 import { ZOOM_LEVELS } from '../../constants';
 
 // Helper function to calculate task style
@@ -167,7 +167,7 @@ export const GanttTimeline = memo(({
 
                 {groupTasks.map((task) => {
                   const style = getTaskStyleMemo(task);
-                  const { isOverdue, isWarning } = getTimeStatus(task, warningThreshold);
+                  const { isOverdue, isWarning } = getTaskOverallStatus(task, warningThreshold);
                   const progress = calculateChecklistProgress(task.checklist);
 
                   return (

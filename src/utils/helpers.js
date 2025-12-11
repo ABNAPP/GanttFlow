@@ -12,4 +12,6 @@ export {
   calculateChecklistProgress,
   generateId,
   validateTaskForm,
+  hasOverdueChecklistItems,
+  getTaskOverallStatus,
 } from './task';

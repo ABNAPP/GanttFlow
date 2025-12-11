@@ -35,6 +35,47 @@ export const getTimeStatus = (item, thresholdDays) => {
 };
 
 /**
+ * Check if a task has any overdue checklist items
+ * @param {Object} task - Task object with checklist array
+ * @param {number} thresholdDays - Warning threshold in days
+ * @returns {boolean} - True if any checklist item is overdue
+ */
+export const hasOverdueChecklistItems = (task, thresholdDays) => {
+  if (!task.checklist || task.checklist.length === 0) return false;
+  
+  return task.checklist.some(item => {
+    const status = getTimeStatus(item, thresholdDays);
+    return status.isOverdue;
+  });
+};
+
+/**
+ * Get overall task status including checklist items
+ * @param {Object} task - Task object
+ * @param {number} thresholdDays - Warning threshold in days
+ * @returns {Object} - { isOverdue, isWarning } considering both task and checklist
+ */
+export const getTaskOverallStatus = (task, thresholdDays) => {
+  // Check main task status
+  const taskStatus = getTimeStatus(task, thresholdDays);
+  
+  // Check if any checklist item is overdue
+  const hasOverdueItems = hasOverdueChecklistItems(task, thresholdDays);
+  
+  // Task is overdue if main task is overdue OR any checklist item is overdue
+  const isOverdue = taskStatus.isOverdue || hasOverdueItems;
+  
+  // Task has warning if main task has warning (but not overdue) OR any checklist item has warning
+  const hasWarningItems = task.checklist && task.checklist.some(item => {
+    const status = getTimeStatus(item, thresholdDays);
+    return status.isWarning && !status.isOverdue;
+  });
+  const isWarning = (!isOverdue && (taskStatus.isWarning || hasWarningItems));
+  
+  return { isOverdue, isWarning };
+};
+
+/**
  * Get status color classes for task bars
  * Source: src/utils/helpers.js - getStatusColor
  */

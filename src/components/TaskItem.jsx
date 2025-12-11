@@ -1,7 +1,7 @@
 import { memo } from 'react';
 import { ChevronRight, ChevronDown, AlertTriangle, Briefcase, CheckSquare } from 'lucide-react';
 import { RoleBadge } from './RoleBadge';
-import { getTimeStatus, calculateChecklistProgress } from '../utils/helpers';
+import { getTimeStatus, calculateChecklistProgress, getTaskOverallStatus } from '../utils/helpers';
 
 export const TaskItem = memo(({
   task,
@@ -14,7 +14,8 @@ export const TaskItem = memo(({
   t,
 }) => {
   const progress = calculateChecklistProgress(task.checklist);
-  const { isOverdue, isWarning } = getTimeStatus(task, warningThreshold);
+  // Use overall status that includes checklist items
+  const { isOverdue, isWarning } = getTaskOverallStatus(task, warningThreshold);
   const hasSubtasks = task.checklist && task.checklist.length > 0;
 
   return (

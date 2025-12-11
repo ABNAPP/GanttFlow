@@ -29,7 +29,7 @@ export const FiltersBar = memo(({
     { value: 'Klar', label: 'statusDone' },
     { value: 'Försenad', label: 'statusLate' },
   ];
-  const roles = ['UA', 'HL', 'CAD', 'G', 'O', 'BE', 'PL'];
+  const roles = ['UA', 'HL', 'CAD', 'G', 'O', 'BE', 'PL', t('roleOther')];
 
   const handleSaveView = () => {
     if (!viewName.trim()) return;
