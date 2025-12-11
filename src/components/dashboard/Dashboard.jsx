@@ -294,7 +294,7 @@ export const Dashboard = memo(({ tasks, t, onTaskClick, warningThreshold }) => {
               <div>
                 <div className="flex justify-between text-sm mb-1">
                   <span className="text-gray-600 dark:text-gray-300 flex items-center gap-1">
-                    <span className="w-2 h-2 bg-gray-400 rounded-full" />
+                    <span className="w-2 h-2 bg-blue-500 rounded-full" />
                     {t('priorityNormal')}
                   </span>
                   <span className="font-semibold text-gray-800 dark:text-white">
@@ -311,7 +311,7 @@ export const Dashboard = memo(({ tasks, t, onTaskClick, warningThreshold }) => {
                 </div>
                 <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                   <div
-                    className="bg-gray-400 h-2 rounded-full"
+                    className="bg-blue-500 h-2 rounded-full"
                     style={{
                       width: `${
                         useMemo(() => {
@@ -332,7 +332,7 @@ export const Dashboard = memo(({ tasks, t, onTaskClick, warningThreshold }) => {
               <div>
                 <div className="flex justify-between text-sm mb-1">
                   <span className="text-gray-600 dark:text-gray-300 flex items-center gap-1">
-                    <span className="w-2 h-2 bg-blue-400 rounded-full" />
+                    <span className="w-2 h-2 bg-green-500 rounded-full" />
                     {t('priorityLow')}
                   </span>
                   <span className="font-semibold text-gray-800 dark:text-white">
@@ -349,7 +349,7 @@ export const Dashboard = memo(({ tasks, t, onTaskClick, warningThreshold }) => {
                 </div>
                 <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                   <div
-                    className="bg-blue-400 h-2 rounded-full"
+                    className="bg-green-500 h-2 rounded-full"
                     style={{
                       width: `${
                         useMemo(() => {

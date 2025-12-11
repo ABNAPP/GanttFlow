@@ -50,10 +50,10 @@ export const Header = memo(({
 
   return (
     <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-2 sm:px-4 py-2 sm:py-3 flex flex-col sm:flex-row justify-between items-start sm:items-center shadow-sm z-30 relative transition-colors duration-300 w-full">
-      {/* Top Row - Always Visible */}
-      <div className="flex items-center justify-between w-full gap-2 sm:gap-4">
+      {/* Top Row - Always Visible - Scrollable on Mobile */}
+      <div className="flex items-center w-full gap-2 sm:gap-4 overflow-x-auto sm:overflow-x-visible sm:justify-between scrollbar-hide min-w-0">
         {/* Left Side - Logo, Title, Sidebar Toggle */}
-        <div className="flex items-center gap-2 min-w-0 flex-1">
+        <div className="flex items-center gap-2 flex-shrink-0">
           <button
             onClick={onToggleSidebar}
             className="p-1.5 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex-shrink-0"
@@ -66,18 +66,18 @@ export const Header = memo(({
           <div className="bg-indigo-600 p-1 sm:p-1.5 rounded-lg flex-shrink-0 hidden sm:block">
             <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
           </div>
-          <div className="min-w-0 flex-1">
-            <h1 className="text-sm sm:text-lg font-bold text-gray-800 dark:text-white leading-tight truncate">
+          <div className="flex-shrink-0">
+            <h1 className="text-sm sm:text-lg font-bold text-gray-800 dark:text-white leading-tight whitespace-nowrap">
               {t('title')}
             </h1>
-            <p className="text-[10px] text-gray-500 dark:text-gray-400 font-medium hidden sm:block">
+            <p className="text-[10px] text-gray-500 dark:text-gray-400 font-medium hidden sm:block whitespace-nowrap">
               v3.7 • {tasksCount} {t('subtitle')}
             </p>
           </div>
         </div>
 
         {/* Right Side - Actions */}
-        <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+        <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0 whitespace-nowrap">
           {/* Mobile Search Button */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -89,7 +89,7 @@ export const Header = memo(({
           </button>
 
           {/* Desktop Search */}
-          <div className="hidden sm:flex items-center gap-2 bg-gray-100 dark:bg-gray-700 rounded-md px-2 py-1.5 border border-transparent focus-within:border-indigo-300 dark:focus-within:border-indigo-500 focus-within:bg-white dark:focus-within:bg-gray-800 transition-all">
+          <div className="hidden sm:flex items-center gap-2 bg-gray-100 dark:bg-gray-700 rounded-md px-2 py-1.5 border border-transparent focus-within:border-indigo-300 dark:focus-within:border-indigo-500 focus-within:bg-white dark:focus-within:bg-gray-800 transition-all flex-shrink-0">
             <Search size={14} className="text-gray-400" />
             <input
               type="text"
@@ -102,7 +102,7 @@ export const Header = memo(({
           </div>
 
           {/* Desktop: Language & Theme */}
-          <div className="hidden sm:flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-1 border border-gray-200 dark:border-gray-600">
+          <div className="hidden sm:flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-1 border border-gray-200 dark:border-gray-600 flex-shrink-0">
             <button
               onClick={onToggleLang}
               className="p-1.5 hover:bg-white dark:hover:bg-gray-600 rounded-md text-gray-600 dark:text-gray-300 transition-colors"
@@ -123,7 +123,7 @@ export const Header = memo(({
           </div>
 
           {/* Desktop: Zoom Controls */}
-          <div className="hidden md:flex bg-gray-100 dark:bg-gray-700 p-1 rounded-lg border border-gray-200 dark:border-gray-600">
+          <div className="hidden md:flex bg-gray-100 dark:bg-gray-700 p-1 rounded-lg border border-gray-200 dark:border-gray-600 flex-shrink-0">
             <button
               onClick={() => onZoomChange('day')}
               className={`p-1.5 rounded-md ${
@@ -163,7 +163,7 @@ export const Header = memo(({
           </div>
 
           {/* Desktop: Action Icons */}
-          <div className="hidden lg:flex items-center gap-1">
+          <div className="hidden lg:flex items-center gap-1 flex-shrink-0">
             {onExportCSV && (
               <button
                 onClick={onExportCSV}
