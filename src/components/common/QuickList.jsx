@@ -1,10 +1,11 @@
 import { memo, useState, useEffect } from 'react';
-import { CheckSquare, Plus, Trash2, List } from 'lucide-react';
+import { CheckSquare, Plus, Trash2, List, Circle } from 'lucide-react';
 import { useQuickList } from '../../hooks/useQuickList';
 
 export const QuickList = memo(({ user, t }) => {
-  const { items, loading, addItem, toggleItem, deleteItem } = useQuickList(user);
+  const { items, loading, addItem, toggleItem, deleteItem, updateItemPriority } = useQuickList(user);
   const [newItemText, setNewItemText] = useState('');
+  const [newItemPriority, setNewItemPriority] = useState('normal');
 
   // Debug log
   useEffect(() => {
@@ -13,8 +14,18 @@ export const QuickList = memo(({ user, t }) => {
 
   const handleAdd = () => {
     if (newItemText.trim()) {
-      addItem(newItemText);
+      addItem(newItemText, newItemPriority);
       setNewItemText('');
+      setNewItemPriority('normal');
+    }
+  };
+
+  const getPriorityColorClass = (priority) => {
+    switch (priority) {
+      case 'high': return 'text-red-500';
+      case 'normal': return 'text-blue-500';
+      case 'low': return 'text-green-500';
+      default: return 'text-gray-400';
     }
   };
 
@@ -80,6 +91,14 @@ export const QuickList = memo(({ user, t }) => {
                 >
                   <CheckSquare size={16} className={item.done ? 'fill-current' : ''} />
                 </button>
+                {/* Priority indicator */}
+                {!item.done && (
+                  <Circle 
+                    size={8} 
+                    className={`${getPriorityColorClass(item.priority || 'normal')} fill-current flex-shrink-0`} 
+                    title={t(`priority${(item.priority || 'normal').charAt(0).toUpperCase() + (item.priority || 'normal').slice(1)}`)} 
+                  />
+                )}
                 <span
                   className={`flex-1 text-sm ${
                     item.done
@@ -89,6 +108,20 @@ export const QuickList = memo(({ user, t }) => {
                 >
                   {item.text}
                 </span>
+                {/* Priority selector */}
+                {!item.done && (
+                  <select
+                    value={item.priority || 'normal'}
+                    onChange={(e) => updateItemPriority(item.id, e.target.value)}
+                    onClick={(e) => e.stopPropagation()}
+                    className="text-xs border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded px-1.5 py-0.5 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer outline-none focus:ring-1 focus:ring-indigo-500"
+                    aria-label={t('labelPriority')}
+                  >
+                    <option value="low">{t('priorityLow')}</option>
+                    <option value="normal">{t('priorityNormal')}</option>
+                    <option value="high">{t('priorityHigh')}</option>
+                  </select>
+                )}
                 <button
                   onClick={() => deleteItem(item.id)}
                   className="p-1 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
@@ -114,6 +147,16 @@ export const QuickList = memo(({ user, t }) => {
             className="flex-1 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded px-2 py-1.5 text-sm outline-none focus:border-indigo-500"
             aria-label={t('quickListPlaceholder')}
           />
+          <select
+            value={newItemPriority}
+            onChange={(e) => setNewItemPriority(e.target.value)}
+            className="text-xs border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded px-2 py-1.5 outline-none focus:border-indigo-500"
+            aria-label={t('labelPriority')}
+          >
+            <option value="low">{t('priorityLow')}</option>
+            <option value="normal">{t('priorityNormal')}</option>
+            <option value="high">{t('priorityHigh')}</option>
+          </select>
           <button
             onClick={handleAdd}
             className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded text-sm flex items-center gap-1"
