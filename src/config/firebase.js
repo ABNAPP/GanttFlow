@@ -117,3 +117,4 @@ export const getTaskDoc = (uid, taskId) =>
 
 export const getBackupsCollection = (uid) =>
   collection(db, 'artifacts', appId, 'users', uid, 'backups');
+
