@@ -14,11 +14,14 @@ import { useDebounce } from './hooks/useDebounce';
 // Layout Components
 import { Header } from './components/layout/Header';
 import { Sidebar } from './components/layout/Sidebar';
+import { NavigationSidebar } from './components/layout/NavigationSidebar';
+import { TaskDetailPanel } from './components/layout/TaskDetailPanel';
 import { FiltersBar } from './components/common/FiltersBar';
 
 // Feature Components - Lazy loaded for code splitting
 const GanttTimeline = lazy(() => import('./components/gantt/GanttTimeline').then(module => ({ default: module.GanttTimeline })));
 const Dashboard = lazy(() => import('./components/dashboard/Dashboard').then(module => ({ default: module.Dashboard })));
+const QuickListView = lazy(() => import('./components/views/QuickListView').then(module => ({ default: module.QuickListView })));
 
 // Modal Components - Lazy loaded (only loaded when modals are opened)
 const TaskModal = lazy(() => import('./components/modals/TaskModal').then(module => ({ default: module.TaskModal })));
@@ -99,15 +102,23 @@ export default function App() {
   const [isQuickListOpen, setIsQuickListOpen] = useState(false);
   const [isQuickListArchiveOpen, setIsQuickListArchiveOpen] = useState(false);
   const [isQuickListTrashOpen, setIsQuickListTrashOpen] = useState(false);
-  const [isDashboardOpen, setIsDashboardOpen] = useState(() => {
+  // Current view: 'dashboard', 'gantt', 'tasks', 'quicklist'
+  const [currentView, setCurrentView] = useState(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('gantt-dashboard-open');
-      return saved !== null ? saved === 'true' : true; // Default to true (Dashboard)
+      const saved = localStorage.getItem('gantt-current-view');
+      return saved || 'dashboard'; // Default to dashboard
     }
-    return true;
+    return 'dashboard';
   });
+  // Keep isDashboardOpen for backward compatibility (maps to currentView === 'dashboard')
+  const isDashboardOpen = currentView === 'dashboard';
   const [editingTask, setEditingTask] = useState(null);
+  const [selectedTask, setSelectedTask] = useState(null); // For right panel
+  const [isTaskDetailPanelOpen, setIsTaskDetailPanelOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(
+    typeof window !== 'undefined' && window.innerWidth > BREAKPOINTS.MOBILE
+  );
+  const [isNavigationSidebarOpen, setIsNavigationSidebarOpen] = useState(
     typeof window !== 'undefined' && window.innerWidth > BREAKPOINTS.MOBILE
   );
 
@@ -187,12 +198,14 @@ export default function App() {
     }
   }, [darkMode]);
 
-  // Save dashboard state to localStorage when it changes
+  // Save current view to localStorage when it changes
   useEffect(() => {
     if (typeof window !== 'undefined') {
+      localStorage.setItem('gantt-current-view', currentView);
+      // Keep backward compatibility
       localStorage.setItem('gantt-dashboard-open', String(isDashboardOpen));
     }
-  }, [isDashboardOpen]);
+  }, [currentView, isDashboardOpen]);
 
   // Initialize view when tasks load
   useEffect(() => {
@@ -325,6 +338,21 @@ export default function App() {
     setEditingTask(task);
     setIsModalOpen(true);
   }, [dragState]);
+
+  // Handle task click - opens right panel instead of modal
+  const handleTaskClick = useCallback((task) => {
+    if (dragState) return;
+    setSelectedTask(task);
+    setIsTaskDetailPanelOpen(true);
+  }, [dragState]);
+
+  // Handle view change
+  const handleViewChange = useCallback((view) => {
+    setCurrentView(view);
+    // Close task detail panel when switching views
+    setIsTaskDetailPanelOpen(false);
+    setSelectedTask(null);
+  }, []);
 
   const handleSaveTask = useCallback(async (formData) => {
     console.log('handleSaveTask called:', { 
@@ -542,11 +570,7 @@ export default function App() {
           onOpenTrash={() => setIsTrashOpen(true)}
           onOpenSettings={() => setIsSettingsOpen(true)}
           onToggleDashboard={() => {
-            const newValue = !isDashboardOpen;
-            setIsDashboardOpen(newValue);
-            if (typeof window !== 'undefined') {
-              localStorage.setItem('gantt-dashboard-open', String(newValue));
-            }
+            handleViewChange(isDashboardOpen ? 'gantt' : 'dashboard');
           }}
           onNewTask={() => handleOpenModal()}
           onExportCSV={handleExportCSV}
@@ -573,26 +597,42 @@ export default function App() {
 
         {/* Main Area */}
         <div className="flex flex-1 overflow-hidden relative">
-          <Sidebar
-            isOpen={isSidebarOpen}
-            tasks={processedTasks}
-            loading={authLoading || loading}
-            searchTerm={searchTerm}
-            onlyMyTasks={onlyMyTasks}
-            sortOption={sortOption}
-            expandedTaskIds={expandedTaskIds}
-            warningThreshold={warningThreshold}
-            onToggleExpand={toggleTaskExpansion}
-            onEdit={handleOpenModal}
-            onQuickStatusChange={handleQuickStatusChange}
-            onChecklistToggle={handleSidebarChecklistToggle}
-            onSearchChange={setSearchTerm}
-            onOnlyMyTasksToggle={setOnlyMyTasks}
-            onSortChange={setSortOption}
+          {/* Navigation Sidebar (Left) */}
+          <NavigationSidebar
+            isOpen={isNavigationSidebarOpen}
+            currentView={currentView}
+            onViewChange={handleViewChange}
+            onToggle={() => setIsNavigationSidebarOpen(!isNavigationSidebarOpen)}
+            onOpenArchive={() => setIsArchiveOpen(true)}
+            onOpenTrash={() => setIsTrashOpen(true)}
+            onOpenSettings={() => setIsSettingsOpen(true)}
             t={t}
           />
 
-          {isDashboardOpen ? (
+          {/* Tasks Sidebar (only shown in 'tasks' view) */}
+          {currentView === 'tasks' && (
+            <Sidebar
+              isOpen={isSidebarOpen}
+              tasks={processedTasks}
+              loading={authLoading || loading}
+              searchTerm={searchTerm}
+              onlyMyTasks={onlyMyTasks}
+              sortOption={sortOption}
+              expandedTaskIds={expandedTaskIds}
+              warningThreshold={warningThreshold}
+              onToggleExpand={toggleTaskExpansion}
+              onEdit={handleTaskClick}
+              onQuickStatusChange={handleQuickStatusChange}
+              onChecklistToggle={handleSidebarChecklistToggle}
+              onSearchChange={setSearchTerm}
+              onOnlyMyTasksToggle={setOnlyMyTasks}
+              onSortChange={setSortOption}
+              t={t}
+            />
+          )}
+
+          {/* Main Content Area */}
+          {currentView === 'dashboard' ? (
             <div className="flex-1 overflow-auto bg-gray-50 dark:bg-gray-900">
               <Suspense fallback={
                 <div className="flex items-center justify-center h-full">
@@ -602,12 +642,12 @@ export default function App() {
                 <Dashboard 
                   tasks={tasks} 
                   t={t} 
-                  onTaskClick={handleOpenModal}
+                  onTaskClick={handleTaskClick}
                   warningThreshold={warningThreshold}
                 />
               </Suspense>
             </div>
-          ) : (
+          ) : currentView === 'gantt' ? (
             <Suspense fallback={
               <div className="flex items-center justify-center h-full">
                 <div className="text-gray-500 dark:text-gray-400">{t('loading')}...</div>
@@ -623,13 +663,54 @@ export default function App() {
                 dragState={dragState}
                 dragMovedRef={dragMovedRef}
                 onDragStart={handleDragStart}
-                onTaskClick={handleOpenModal}
+                onTaskClick={handleTaskClick}
                 onScrollTimeline={scrollTimeline}
                 t={t}
                 lang={lang}
               />
             </Suspense>
-          )}
+          ) : currentView === 'tasks' ? (
+            <div className="flex-1 overflow-auto bg-gray-50 dark:bg-gray-900">
+              <div className="p-4 text-center text-gray-500 dark:text-gray-400">
+                {t('tasks')} {t('view') || 'View'}
+              </div>
+            </div>
+          ) : currentView === 'quicklist' ? (
+            <Suspense fallback={
+              <div className="flex items-center justify-center h-full">
+                <div className="text-gray-500 dark:text-gray-400">{t('loading')}...</div>
+              </div>
+            }>
+              <QuickListView
+                user={user}
+                t={t}
+                onOpenArchive={() => {
+                  setIsQuickListArchiveOpen(true);
+                }}
+                onOpenTrash={() => {
+                  setIsQuickListTrashOpen(true);
+                }}
+              />
+            </Suspense>
+          ) : null}
+
+          {/* Task Detail Panel (Right) */}
+          <TaskDetailPanel
+            task={selectedTask}
+            isOpen={isTaskDetailPanelOpen && !!selectedTask}
+            onClose={() => {
+              setIsTaskDetailPanelOpen(false);
+              setSelectedTask(null);
+            }}
+            onEdit={(task) => {
+              setEditingTask(task);
+              setIsModalOpen(true);
+              setIsTaskDetailPanelOpen(false);
+            }}
+            warningThreshold={warningThreshold}
+            t={t}
+            lang={lang}
+          />
         </div>
 
         {/* Modals - Lazy loaded */}
