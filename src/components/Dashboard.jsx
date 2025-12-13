@@ -79,7 +79,7 @@ export const Dashboard = memo(({ tasks, t, onTaskClick, warningThreshold }) => {
     <div className="p-6 space-y-6">
       <div className="flex items-center gap-2 mb-4">
         <BarChart3 className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
-        <h2 className="text-xl font-bold text-gray-800 dark:text-white">Dashboard / Översikt</h2>
+        <h2 className="text-xl font-bold text-gray-800 dark:text-white">{t('dashboardTitle')}</h2>
       </div>
 
       {/* Stats Cards */}

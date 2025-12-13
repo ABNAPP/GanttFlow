@@ -1,8 +1,8 @@
 import { memo } from 'react';
-import { X } from 'lucide-react';
+import { X, Archive, Trash2 } from 'lucide-react';
 import { QuickList } from '../common/QuickList';
 
-export const QuickListModal = memo(({ isOpen, onClose, user, t }) => {
+export const QuickListModal = memo(({ isOpen, onClose, user, t, onOpenArchive, onOpenTrash }) => {
   if (!isOpen) return null;
 
   return (
@@ -21,9 +21,37 @@ export const QuickListModal = memo(({ isOpen, onClose, user, t }) => {
           <h2 id="quicklist-modal-title" className="text-lg font-semibold text-gray-800 dark:text-white">
             {t('quickListTitle')}
           </h2>
-          <button onClick={onClose} aria-label={t('cancel')}>
-            <X className="w-5 h-5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200" />
-          </button>
+          <div className="flex items-center gap-2">
+            {onOpenArchive && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onOpenArchive();
+                }}
+                className="p-2 text-gray-400 hover:text-yellow-500 dark:hover:text-yellow-400 transition-colors"
+                title={t('archive')}
+                aria-label={t('archive')}
+              >
+                <Archive size={18} />
+              </button>
+            )}
+            {onOpenTrash && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onOpenTrash();
+                }}
+                className="p-2 text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors"
+                title={t('trash')}
+                aria-label={t('trash')}
+              >
+                <Trash2 size={18} />
+              </button>
+            )}
+            <button onClick={onClose} aria-label={t('cancel')}>
+              <X className="w-5 h-5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200" />
+            </button>
+          </div>
         </div>
 
         <div className="p-4">

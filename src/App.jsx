@@ -5,6 +5,7 @@ import { useState, useEffect, useMemo, useCallback, useRef, Suspense, lazy } fro
 // Hooks
 import { useAuth } from './hooks/useAuth';
 import { useTasks } from './hooks/useTasks';
+import { useQuickList } from './hooks/useQuickList';
 import { useDragAndDrop } from './hooks/useDragAndDrop';
 import { useTaskFilters } from './hooks/useTaskFilters';
 import { useTimeline } from './hooks/useTimeline';
@@ -25,6 +26,8 @@ const SettingsModal = lazy(() => import('./components/modals/SettingsModal').the
 const ArchiveModal = lazy(() => import('./components/modals/ArchiveModal').then(module => ({ default: module.ArchiveModal })));
 const TrashModal = lazy(() => import('./components/modals/TrashModal').then(module => ({ default: module.TrashModal })));
 const QuickListModal = lazy(() => import('./components/modals/QuickListModal').then(module => ({ default: module.QuickListModal })));
+const QuickListArchiveModal = lazy(() => import('./components/modals/QuickListArchiveModal').then(module => ({ default: module.QuickListArchiveModal })));
+const QuickListTrashModal = lazy(() => import('./components/modals/QuickListTrashModal').then(module => ({ default: module.QuickListTrashModal })));
 
 // Utils & Config
 import { TRANSLATIONS } from './constants/translations';
@@ -79,12 +82,23 @@ export default function App() {
     viewInitializedRef,
   } = useTasks(user);
 
+  // Quick List
+  const {
+    archivedItems: quickListArchivedItems,
+    deletedItems: quickListDeletedItems,
+    restoreItem: restoreQuickListItem,
+    permanentDeleteItem: permanentDeleteQuickListItem,
+    deleteItem: deleteQuickListItem,
+  } = useQuickList(user);
+
   // UI State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isArchiveOpen, setIsArchiveOpen] = useState(false);
   const [isTrashOpen, setIsTrashOpen] = useState(false);
   const [isQuickListOpen, setIsQuickListOpen] = useState(false);
+  const [isQuickListArchiveOpen, setIsQuickListArchiveOpen] = useState(false);
+  const [isQuickListTrashOpen, setIsQuickListTrashOpen] = useState(false);
   const [isDashboardOpen, setIsDashboardOpen] = useState(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('gantt-dashboard-open');
@@ -696,6 +710,52 @@ export default function App() {
               isOpen={isQuickListOpen}
               onClose={() => setIsQuickListOpen(false)}
               user={user}
+              t={t}
+              onOpenArchive={() => {
+                setIsQuickListOpen(false);
+                setIsQuickListArchiveOpen(true);
+              }}
+              onOpenTrash={() => {
+                setIsQuickListOpen(false);
+                setIsQuickListTrashOpen(true);
+              }}
+            />
+          </Suspense>
+        )}
+
+        {isQuickListArchiveOpen && (
+          <Suspense fallback={null}>
+            <QuickListArchiveModal
+              isOpen={isQuickListArchiveOpen}
+              onClose={() => setIsQuickListArchiveOpen(false)}
+              archivedItems={quickListArchivedItems}
+              onRestore={(id) => {
+                restoreQuickListItem(id);
+                showSuccess(t('quickListItemRestored'));
+              }}
+              onDelete={(id) => {
+                deleteQuickListItem(id);
+                showSuccess(t('quickListItemDeleted'));
+              }}
+              t={t}
+            />
+          </Suspense>
+        )}
+
+        {isQuickListTrashOpen && (
+          <Suspense fallback={null}>
+            <QuickListTrashModal
+              isOpen={isQuickListTrashOpen}
+              onClose={() => setIsQuickListTrashOpen(false)}
+              deletedItems={quickListDeletedItems}
+              onRestore={(id) => {
+                restoreQuickListItem(id);
+                showSuccess(t('quickListItemRestored'));
+              }}
+              onPermanentDelete={(id) => {
+                permanentDeleteQuickListItem(id);
+                showSuccess(t('quickListItemPermanentlyDeleted'));
+              }}
               t={t}
             />
           </Suspense>

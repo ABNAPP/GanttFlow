@@ -151,7 +151,10 @@ export const useQuickList = (user) => {
   const deleteItem = async (id) => {
     if (!user) return;
 
-    const updated = items.filter((item) => item.id !== id);
+    // Soft delete - mark as deleted instead of removing
+    const updated = items.map((item) =>
+      item.id === id ? { ...item, deleted: true, deletedAt: new Date().toISOString() } : item
+    );
 
     // Demo mode
     if (user.uid && user.uid.startsWith('demo-user-')) {
@@ -172,6 +175,120 @@ export const useQuickList = (user) => {
       setItems(updated);
     } catch (error) {
       console.error('Error deleting quick list item:', error);
+    }
+  };
+
+  const archiveItem = async (id) => {
+    if (!user) return;
+
+    const updated = items.map((item) =>
+      item.id === id ? { ...item, archived: true, archivedAt: new Date().toISOString() } : item
+    );
+
+    // Demo mode
+    if (user.uid && user.uid.startsWith('demo-user-')) {
+      if (!isDemoModeAllowed()) return;
+      try {
+        localStorage.setItem('quick-list', JSON.stringify(updated));
+        setItems(updated);
+      } catch (e) {
+        console.error('Error saving quick list to localStorage:', e);
+      }
+      return;
+    }
+
+    // Firebase mode
+    try {
+      const quickListRef = doc(db, 'artifacts', appId, 'users', user.uid, 'quickList', 'items');
+      await setDoc(quickListRef, { items: updated }, { merge: true });
+      setItems(updated);
+    } catch (error) {
+      console.error('Error archiving quick list item:', error);
+    }
+  };
+
+  const restoreItem = async (id) => {
+    if (!user) return;
+
+    const updated = items.map((item) =>
+      item.id === id ? { ...item, archived: false, archivedAt: null, deleted: false, deletedAt: null } : item
+    );
+
+    // Demo mode
+    if (user.uid && user.uid.startsWith('demo-user-')) {
+      if (!isDemoModeAllowed()) return;
+      try {
+        localStorage.setItem('quick-list', JSON.stringify(updated));
+        setItems(updated);
+      } catch (e) {
+        console.error('Error saving quick list to localStorage:', e);
+      }
+      return;
+    }
+
+    // Firebase mode
+    try {
+      const quickListRef = doc(db, 'artifacts', appId, 'users', user.uid, 'quickList', 'items');
+      await setDoc(quickListRef, { items: updated }, { merge: true });
+      setItems(updated);
+    } catch (error) {
+      console.error('Error restoring quick list item:', error);
+    }
+  };
+
+  const permanentDeleteItem = async (id) => {
+    if (!user) return;
+
+    const updated = items.filter((item) => item.id !== id);
+
+    // Demo mode
+    if (user.uid && user.uid.startsWith('demo-user-')) {
+      if (!isDemoModeAllowed()) return;
+      try {
+        localStorage.setItem('quick-list', JSON.stringify(updated));
+        setItems(updated);
+      } catch (e) {
+        console.error('Error saving quick list to localStorage:', e);
+      }
+      return;
+    }
+
+    // Firebase mode
+    try {
+      const quickListRef = doc(db, 'artifacts', appId, 'users', user.uid, 'quickList', 'items');
+      await setDoc(quickListRef, { items: updated }, { merge: true });
+      setItems(updated);
+    } catch (error) {
+      console.error('Error permanently deleting quick list item:', error);
+    }
+  };
+
+  const updateItemText = async (id, text, priority) => {
+    if (!user || !text.trim()) return;
+
+    const updated = items.map((item) =>
+      item.id === id ? { ...item, text: text.trim(), priority: priority || item.priority || 'normal' } : item
+    );
+
+    // Demo mode
+    if (user.uid && user.uid.startsWith('demo-user-')) {
+      if (!isDemoModeAllowed()) return;
+      try {
+        localStorage.setItem('quick-list', JSON.stringify(updated));
+        setItems(updated);
+      } catch (e) {
+        console.error('Error saving quick list to localStorage:', e);
+      }
+      return;
+    }
+
+    // Firebase mode
+    try {
+      const quickListRef = doc(db, 'artifacts', appId, 'users', user.uid, 'quickList', 'items');
+      await setDoc(quickListRef, { items: updated }, { merge: true });
+      setItems(updated);
+    } catch (error) {
+      console.error('Error updating quick list item text:', error);
     }
   };
 
@@ -204,9 +321,14 @@ export const useQuickList = (user) => {
     }
   };
 
-  // Sort items by priority: high > normal > low, then by creation date
+  // Filter items: active (not archived, not deleted), archived, deleted
+  const activeItems = items.filter((item) => !item.archived && !item.deleted);
+  const archivedItems = items.filter((item) => item.archived && !item.deleted);
+  const deletedItems = items.filter((item) => item.deleted);
+
+  // Sort active items by priority: high > normal > low, then by creation date
   const priorityOrder = { high: 3, normal: 2, low: 1 };
-  const sortedItems = [...items].sort((a, b) => {
+  const sortedActiveItems = [...activeItems].sort((a, b) => {
     // First sort by priority (if not done)
     if (!a.done && !b.done) {
       const priorityDiff = (priorityOrder[b.priority || 'normal'] || 2) - (priorityOrder[a.priority || 'normal'] || 2);
@@ -218,6 +340,29 @@ export const useQuickList = (user) => {
     return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
   });
 
-  return { items: sortedItems, loading, addItem, toggleItem, deleteItem, updateItemPriority };
+  // Sort archived items by archived date (newest first)
+  const sortedArchivedItems = [...archivedItems].sort((a, b) => {
+    return new Date(b.archivedAt || 0) - new Date(a.archivedAt || 0);
+  });
+
+  // Sort deleted items by deleted date (newest first)
+  const sortedDeletedItems = [...deletedItems].sort((a, b) => {
+    return new Date(b.deletedAt || 0) - new Date(a.deletedAt || 0);
+  });
+
+  return {
+    items: sortedActiveItems,
+    archivedItems: sortedArchivedItems,
+    deletedItems: sortedDeletedItems,
+    loading,
+    addItem,
+    toggleItem,
+    deleteItem,
+    archiveItem,
+    restoreItem,
+    permanentDeleteItem,
+    updateItemPriority,
+    updateItemText,
+  };
 };
 
