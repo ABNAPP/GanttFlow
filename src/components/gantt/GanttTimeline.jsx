@@ -1,6 +1,6 @@
 import { useMemo, memo, useCallback } from 'react';
 import { ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react';
-import { getDaysArray, getTimeStatus, calculateChecklistProgress, isRedDay, getStatusColor, getTaskOverallStatus } from '../../utils/helpers';
+import { getDaysArray, getTimeStatus, calculateChecklistProgress, isRedDay, getStatusColor, getStatusBorderColor, getTaskOverallStatus } from '../../utils/helpers';
 import { ZOOM_LEVELS } from '../../constants';
 
 // Helper function to calculate task style
@@ -41,6 +41,7 @@ export const GanttTimeline = memo(({
   onDragStart,
   onTaskClick,
   onScrollTimeline,
+  selectedTaskId,
   t,
   lang,
 }) => {
@@ -169,18 +170,24 @@ export const GanttTimeline = memo(({
                   const style = getTaskStyleMemo(task);
                   const { isOverdue, isWarning } = getTaskOverallStatus(task, warningThreshold);
                   const progress = calculateChecklistProgress(task.checklist);
+                  const isSelected = selectedTaskId === task.id;
+                  const borderColor = getStatusBorderColor(task.status, isOverdue);
 
                   return (
                     <div
                       key={task.id}
-                      className="relative h-[40px] border-b border-gray-50/50 dark:border-gray-800/50 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group"
+                      className={`relative h-[40px] border-b border-gray-50/50 dark:border-gray-800/50 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group ${
+                        isSelected ? 'bg-indigo-50/50 dark:bg-indigo-900/10' : ''
+                      }`}
                     >
                       <div
-                        className={`absolute top-2 h-6 shadow-sm cursor-grab active:cursor-grabbing flex items-center justify-center text-white text-[10px] z-10 group-hover:brightness-95 transition-all select-none overflow-hidden ${getStatusColor(
-                          task.status,
-                          style.isMilestone,
-                          isOverdue
-                        )}`}
+                        className={`absolute top-2 h-6 shadow-sm cursor-grab active:cursor-grabbing flex items-center justify-center text-gray-800 dark:text-gray-200 text-[10px] z-10 group-hover:brightness-95 transition-all select-none overflow-hidden border-l-4 ${borderColor} ${
+                          style.isMilestone ? 'rotate-45' : 'rounded-md'
+                        } ${
+                          isSelected 
+                            ? 'bg-indigo-100/20 dark:bg-indigo-900/20' 
+                            : 'bg-gray-100 dark:bg-gray-800'
+                        }`}
                         style={{
                           left: style.left,
                           width: style.width,
@@ -193,7 +200,7 @@ export const GanttTimeline = memo(({
                             onTaskClick(task);
                           }
                         }}
-                        title={`${task.title}\n${task.startDate} -> ${task.endDate}`}
+                        title={`${task.title}\nDeadline: ${task.endDate}\nStatus: ${task.status}\nTilldelad: ${task.assignee || task.executor || 'Ingen'}`}
                         role="button"
                         tabIndex={0}
                         aria-label={`Task: ${task.title}`}
@@ -213,11 +220,11 @@ export const GanttTimeline = memo(({
                             {(isOverdue || isWarning) && (
                               <AlertTriangle
                                 size={12}
-                                className="text-white shrink-0 fill-current animate-pulse"
+                                className={`shrink-0 fill-current ${isOverdue ? 'text-red-500' : 'text-orange-500'}`}
                                 aria-label={isOverdue ? t('statusLate') : t('warning')}
                               />
                             )}
-                            <span className="truncate pointer-events-none">{task.title}</span>
+                            <span className="truncate pointer-events-none text-gray-800 dark:text-gray-200">{task.title}</span>
                           </div>
                         )}
                       </div>

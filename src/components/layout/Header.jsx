@@ -20,6 +20,9 @@ import {
   LogOut,
   Menu,
   X,
+  List,
+  Layout,
+  Split,
 } from 'lucide-react';
 
 export const Header = memo(({
@@ -31,6 +34,7 @@ export const Header = memo(({
   onlyMyTasks,
   isDashboardOpen,
   tasksCount,
+  ganttViewMode,
   onToggleSidebar,
   onToggleTheme,
   onToggleLang,
@@ -41,6 +45,7 @@ export const Header = memo(({
   onOpenTrash,
   onOpenSettings,
   onToggleDashboard,
+  onGanttViewModeChange,
   onNewTask,
   onExportCSV,
   onLogout,
@@ -121,6 +126,51 @@ export const Header = memo(({
               {darkMode ? <Sun size={16} /> : <Moon size={16} />}
             </button>
           </div>
+
+          {/* Desktop: View Mode Toggle (only in Gantt view) */}
+          {!isDashboardOpen && onGanttViewModeChange && (
+            <div className="hidden md:flex bg-gray-100 dark:bg-gray-700 p-1 rounded-lg border border-gray-200 dark:border-gray-600 flex-shrink-0">
+              <button
+                onClick={() => onGanttViewModeChange('list')}
+                className={`p-1.5 rounded-md ${
+                  ganttViewMode === 'list'
+                    ? 'bg-white dark:bg-gray-600 shadow-sm text-indigo-600 dark:text-indigo-400'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                }`}
+                title={t('viewList') || 'Lista'}
+                aria-label={t('viewList') || 'Lista'}
+                aria-pressed={ganttViewMode === 'list'}
+              >
+                <List size={14} />
+              </button>
+              <button
+                onClick={() => onGanttViewModeChange('split')}
+                className={`p-1.5 rounded-md ${
+                  ganttViewMode === 'split'
+                    ? 'bg-white dark:bg-gray-600 shadow-sm text-indigo-600 dark:text-indigo-400'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                }`}
+                title={t('viewSplit') || 'Delad'}
+                aria-label={t('viewSplit') || 'Delad'}
+                aria-pressed={ganttViewMode === 'split'}
+              >
+                <Split size={14} />
+              </button>
+              <button
+                onClick={() => onGanttViewModeChange('gantt')}
+                className={`p-1.5 rounded-md ${
+                  ganttViewMode === 'gantt'
+                    ? 'bg-white dark:bg-gray-600 shadow-sm text-indigo-600 dark:text-indigo-400'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                }`}
+                title={t('viewGantt') || 'Gantt'}
+                aria-label={t('viewGantt') || 'Gantt'}
+                aria-pressed={ganttViewMode === 'gantt'}
+              >
+                <Layout size={14} />
+              </button>
+            </div>
+          )}
 
           {/* Desktop: Zoom Controls */}
           <div className="hidden md:flex bg-gray-100 dark:bg-gray-700 p-1 rounded-lg border border-gray-200 dark:border-gray-600 flex-shrink-0">

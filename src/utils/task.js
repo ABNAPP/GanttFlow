@@ -101,6 +101,26 @@ export const getStatusColor = (status, isMilestone, isOverdue) => {
 };
 
 /**
+ * Get status border color for left border (4px) - Forbättring 4
+ * Returns Tailwind color class for border-left
+ */
+export const getStatusBorderColor = (status, isOverdue) => {
+  if (isOverdue) return 'border-l-red-500';
+  
+  const s = (status || '').toLowerCase();
+  
+  if (s.includes('klar') || s.includes('done'))
+    return 'border-l-green-500'; // #22c55e
+  if (s.includes('pågående') || s.includes('progress'))
+    return 'border-l-blue-500'; // #3b82f6
+  if (s.includes('blockerad') || s.includes('blocked') || s.includes('försenad') || s.includes('delayed'))
+    return 'border-l-red-500'; // #ef4444
+  
+  // Att göra / Planerad - ingen färg
+  return 'border-l-transparent';
+};
+
+/**
  * Get status border classes
  * Source: src/utils/helpers.js - getStatusBorder
  */

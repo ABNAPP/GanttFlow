@@ -18,12 +18,14 @@ export const Sidebar = memo(({
   onSearchChange,
   onOnlyMyTasksToggle,
   onSortChange,
+  selectedTaskId,
+  isInSplitView,
   t,
 }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="w-80 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col shadow-[4px_0_24px_rgba(0,0,0,0.02)] z-20 overflow-y-auto transition-colors duration-300 absolute md:relative h-full">
+    <div className={`w-full bg-white dark:bg-gray-800 ${!isInSplitView ? 'border-r border-gray-200 dark:border-gray-700 shadow-[4px_0_24px_rgba(0,0,0,0.02)] z-20 absolute md:relative' : ''} flex flex-col overflow-y-auto transition-colors duration-300 h-full`}>
       {/* Sidebar Header with Sort */}
       <div className="h-10 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-4 bg-gray-50 dark:bg-gray-800 sticky top-0 z-20">
         <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
@@ -66,19 +68,20 @@ export const Sidebar = memo(({
                 {groupTasks.length}
               </span>
             </div>
-            {groupTasks.map((task) => (
-              <TaskItem
-                key={task.id}
-                task={task}
-                isExpanded={expandedTaskIds.has(task.id)}
-                warningThreshold={warningThreshold}
-                onToggleExpand={onToggleExpand}
-                onEdit={onEdit}
-                onQuickStatusChange={onQuickStatusChange}
-                onChecklistToggle={onChecklistToggle}
-                t={t}
-              />
-            ))}
+              {groupTasks.map((task) => (
+                <TaskItem
+                  key={task.id}
+                  task={task}
+                  isExpanded={expandedTaskIds.has(task.id)}
+                  warningThreshold={warningThreshold}
+                  onToggleExpand={onToggleExpand}
+                  onEdit={onEdit}
+                  onQuickStatusChange={onQuickStatusChange}
+                  onChecklistToggle={onChecklistToggle}
+                  isSelected={selectedTaskId === task.id}
+                  t={t}
+                />
+              ))}
           </div>
         ))
       )}

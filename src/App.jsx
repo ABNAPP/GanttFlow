@@ -22,6 +22,7 @@ import { FiltersBar } from './components/common/FiltersBar';
 const GanttTimeline = lazy(() => import('./components/gantt/GanttTimeline').then(module => ({ default: module.GanttTimeline })));
 const Dashboard = lazy(() => import('./components/dashboard/Dashboard').then(module => ({ default: module.Dashboard })));
 const QuickListView = lazy(() => import('./components/views/QuickListView').then(module => ({ default: module.QuickListView })));
+const SplitView = lazy(() => import('./components/views/SplitView').then(module => ({ default: module.SplitView })));
 
 // Modal Components - Lazy loaded (only loaded when modals are opened)
 const TaskModal = lazy(() => import('./components/modals/TaskModal').then(module => ({ default: module.TaskModal })));
@@ -109,6 +110,14 @@ export default function App() {
       return saved || 'dashboard'; // Default to dashboard
     }
     return 'dashboard';
+  });
+  // View mode for Gantt/Tasks: 'list', 'gantt', 'split'
+  const [ganttViewMode, setGanttViewMode] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('gantt-view-mode');
+      return saved || 'gantt'; // Default to gantt only
+    }
+    return 'gantt';
   });
   // Keep isDashboardOpen for backward compatibility (maps to currentView === 'dashboard')
   const isDashboardOpen = currentView === 'dashboard';
@@ -206,6 +215,13 @@ export default function App() {
       localStorage.setItem('gantt-dashboard-open', String(isDashboardOpen));
     }
   }, [currentView, isDashboardOpen]);
+
+  // Save gantt view mode to localStorage when it changes
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('gantt-view-mode', ganttViewMode);
+    }
+  }, [ganttViewMode]);
 
   // Initialize view when tasks load
   useEffect(() => {
@@ -560,6 +576,7 @@ export default function App() {
           onlyMyTasks={onlyMyTasks}
           isDashboardOpen={isDashboardOpen}
           tasksCount={activeTasksCount}
+          ganttViewMode={ganttViewMode}
           onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
           onToggleTheme={toggleTheme}
           onToggleLang={toggleLang}
@@ -572,6 +589,7 @@ export default function App() {
           onToggleDashboard={() => {
             handleViewChange(isDashboardOpen ? 'gantt' : 'dashboard');
           }}
+          onGanttViewModeChange={setGanttViewMode}
           onNewTask={() => handleOpenModal()}
           onExportCSV={handleExportCSV}
           onLogout={logout}
@@ -653,21 +671,75 @@ export default function App() {
                 <div className="text-gray-500 dark:text-gray-400">{t('loading')}...</div>
               </div>
             }>
-              <GanttTimeline
-                tasks={processedTasks}
-                viewStart={viewStart}
-                viewDays={viewDays}
-                zoomLevel={zoomLevel}
-                warningThreshold={warningThreshold}
-                showChecklistInGantt={showChecklistInGantt}
-                dragState={dragState}
-                dragMovedRef={dragMovedRef}
-                onDragStart={handleDragStart}
-                onTaskClick={handleTaskClick}
-                onScrollTimeline={scrollTimeline}
-                t={t}
-                lang={lang}
-              />
+              {ganttViewMode === 'split' ? (
+                <SplitView
+                  tasks={tasks}
+                  processedTasks={processedTasks}
+                  loading={authLoading || loading}
+                  searchTerm={searchTerm}
+                  onlyMyTasks={onlyMyTasks}
+                  sortOption={sortOption}
+                  expandedTaskIds={expandedTaskIds}
+                  warningThreshold={warningThreshold}
+                  viewStart={viewStart}
+                  viewDays={viewDays}
+                  zoomLevel={zoomLevel}
+                  showChecklistInGantt={showChecklistInGantt}
+                  dragState={dragState}
+                  dragMovedRef={dragMovedRef}
+                  onToggleExpand={toggleTaskExpansion}
+                  onTaskClick={handleTaskClick}
+                  onQuickStatusChange={handleQuickStatusChange}
+                  onChecklistToggle={handleSidebarChecklistToggle}
+                  onSearchChange={setSearchTerm}
+                  onOnlyMyTasksToggle={setOnlyMyTasks}
+                  onSortChange={setSortOption}
+                  onDragStart={handleDragStart}
+                  onScrollTimeline={scrollTimeline}
+                  scrollToTask={null}
+                  t={t}
+                  lang={lang}
+                />
+              ) : ganttViewMode === 'list' ? (
+                <div className="flex-1 overflow-auto bg-gray-50 dark:bg-gray-900">
+                  <Sidebar
+                    isOpen={true}
+                    tasks={processedTasks}
+                    loading={authLoading || loading}
+                    searchTerm={searchTerm}
+                    onlyMyTasks={onlyMyTasks}
+                    sortOption={sortOption}
+                    expandedTaskIds={expandedTaskIds}
+                    warningThreshold={warningThreshold}
+                    onToggleExpand={toggleTaskExpansion}
+                    onEdit={handleTaskClick}
+                    onQuickStatusChange={handleQuickStatusChange}
+                    onChecklistToggle={handleSidebarChecklistToggle}
+                    onSearchChange={setSearchTerm}
+                    onOnlyMyTasksToggle={setOnlyMyTasks}
+                    onSortChange={setSortOption}
+                    isInSplitView={false}
+                    t={t}
+                  />
+                </div>
+              ) : (
+                <GanttTimeline
+                  tasks={processedTasks}
+                  viewStart={viewStart}
+                  viewDays={viewDays}
+                  zoomLevel={zoomLevel}
+                  warningThreshold={warningThreshold}
+                  showChecklistInGantt={showChecklistInGantt}
+                  dragState={dragState}
+                  dragMovedRef={dragMovedRef}
+                  onDragStart={handleDragStart}
+                  onTaskClick={handleTaskClick}
+                  onScrollTimeline={scrollTimeline}
+                  selectedTaskId={selectedTask?.id}
+                  t={t}
+                  lang={lang}
+                />
+              )}
             </Suspense>
           ) : currentView === 'tasks' ? (
             <div className="flex-1 overflow-auto bg-gray-50 dark:bg-gray-900">

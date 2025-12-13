@@ -11,6 +11,7 @@ export const TaskItem = memo(({
   onEdit,
   onQuickStatusChange,
   onChecklistToggle,
+  isSelected,
   t,
 }) => {
   const progress = calculateChecklistProgress(task.checklist);
@@ -21,7 +22,9 @@ export const TaskItem = memo(({
     <div className="border-b border-gray-50 dark:border-gray-700/50">
       <div
         onClick={() => onEdit(task)}
-        className="p-3 hover:bg-indigo-50 dark:hover:bg-indigo-900/10 cursor-pointer transition-colors group relative"
+        className={`p-3 hover:bg-indigo-50 dark:hover:bg-indigo-900/10 cursor-pointer transition-colors group relative ${
+          isSelected ? 'bg-indigo-100 dark:bg-indigo-900/30 border-l-4 border-indigo-500' : ''
+        }`}
         role="button"
         tabIndex={0}
         onKeyDown={(e) => {

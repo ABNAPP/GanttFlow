@@ -9,6 +9,7 @@ export {
   getTimeStatus,
   getStatusColor,
   getStatusBorder,
+  getStatusBorderColor,
   calculateChecklistProgress,
   generateId,
   validateTaskForm,
