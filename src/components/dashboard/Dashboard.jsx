@@ -2,8 +2,9 @@ import { memo, useMemo, useState } from 'react';
 import { BarChart3, CheckCircle, Clock, AlertTriangle, Calendar, Filter, Users, Layers, Tag, TrendingUp, ChevronDown, ChevronRight } from 'lucide-react';
 import { checkIsDone, calculateChecklistProgress, hasOverdueChecklistItems, getTimeStatus } from '../../utils/helpers';
 import { WorkloadTasksModal } from '../modals/WorkloadTasksModal';
+import { QuickListSection } from './QuickListSection';
 
-export const Dashboard = memo(({ tasks, t, onTaskClick, warningThreshold }) => {
+export const Dashboard = memo(({ tasks, t, onTaskClick, warningThreshold, user, onOpenQuickList, onConvertToTask }) => {
   const [selectedRole, setSelectedRole] = useState(null);
   const [selectedRoleLabel, setSelectedRoleLabel] = useState(null);
   const [expandedTaskIds, setExpandedTaskIds] = useState(new Set());
@@ -212,6 +213,16 @@ export const Dashboard = memo(({ tasks, t, onTaskClick, warningThreshold }) => {
         <BarChart3 className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-600 dark:text-indigo-400" />
         <h2 className="text-lg sm:text-xl font-bold text-gray-800 dark:text-white">{t('dashboardTitle')}</h2>
       </div>
+
+      {/* Quick List Section - First section for visibility */}
+      {user && (
+        <QuickListSection
+          user={user}
+          t={t}
+          onOpenQuickList={onOpenQuickList}
+          onConvertToTask={onConvertToTask}
+        />
+      )}
 
       {/* Today's Focus Section */}
       <div className="bg-white dark:bg-gray-800 rounded-lg p-4 sm:p-6 border border-gray-200 dark:border-gray-700 shadow-sm">

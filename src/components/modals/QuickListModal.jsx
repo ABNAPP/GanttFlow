@@ -14,7 +14,7 @@ export const QuickListModal = memo(({ isOpen, onClose, user, t, onOpenArchive, o
       aria-labelledby="quicklist-modal-title"
     >
       <div
-        className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200 border border-gray-200 dark:border-gray-700"
+        className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-[95vw] md:max-w-3xl max-h-[90vh] md:max-h-[85vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200 border border-gray-200 dark:border-gray-700 flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-between items-center px-6 py-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
@@ -54,9 +54,11 @@ export const QuickListModal = memo(({ isOpen, onClose, user, t, onOpenArchive, o
           </div>
         </div>
 
-        <div className="p-4">
+        <div className="p-4 md:p-6 flex-1 overflow-hidden flex flex-col min-h-0">
           {user ? (
-            <QuickList user={user} t={t} />
+            <div className="flex-1 min-h-0">
+              <QuickList user={user} t={t} />
+            </div>
           ) : (
             <div className="p-8 text-center text-gray-400 dark:text-gray-500 text-sm">
               {t('authLogin')} {t('authLoginSubtitle')}

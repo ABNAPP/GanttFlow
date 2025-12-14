@@ -1,5 +1,6 @@
 import { memo, useState, useEffect } from 'react';
-import { CheckSquare, Plus, Trash2, List, Circle, Edit2, Archive, X, Check } from 'lucide-react';
+import { CheckSquare, Plus, Trash2, List, Circle, Edit2, Archive, X, Check, Zap } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useQuickList } from '../../hooks/useQuickList';
 import { showSuccess } from '../../utils/toast';
 
@@ -86,14 +87,14 @@ export const QuickList = memo(({ user, t }) => {
 
   if (loading) {
     return (
-      <div className="bg-gray-50 dark:bg-gray-800/50 flex flex-col max-h-[300px] min-h-[200px]">
-        <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2 flex-shrink-0">
-          <List size={14} className="text-indigo-500 dark:text-indigo-400" />
-          <span className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
+      <div className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 border border-amber-200 dark:border-amber-800/30 rounded-xl shadow-sm flex flex-col max-h-[300px] min-h-[200px]">
+        <div className="px-4 py-3 border-b border-amber-200 dark:border-amber-800/30 flex items-center gap-2 flex-shrink-0 bg-amber-100/50 dark:bg-amber-900/10 rounded-t-xl">
+          <Zap size={16} className="text-amber-600 dark:text-amber-400" />
+          <span className="text-sm font-semibold text-amber-900 dark:text-amber-200 tracking-wide">
             {t('quickList')}
           </span>
         </div>
-        <div className="p-4 text-gray-400 text-xs text-center flex-1 flex items-center justify-center">
+        <div className="p-4 text-amber-600/60 dark:text-amber-400/60 text-sm text-center flex-1 flex items-center justify-center">
           {t('loading')}
         </div>
       </div>
@@ -101,27 +102,35 @@ export const QuickList = memo(({ user, t }) => {
   }
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col h-full bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 border border-amber-200 dark:border-amber-800/30 rounded-xl shadow-sm">
       {/* Header */}
-      <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2 flex-shrink-0">
-        <List size={14} className="text-indigo-500 dark:text-indigo-400" />
-        <span className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
+      <div className="px-4 py-3 border-b border-amber-200 dark:border-amber-800/30 flex items-center gap-2 flex-shrink-0 bg-amber-100/50 dark:bg-amber-900/10 rounded-t-xl">
+        <motion.div
+          animate={{ scale: [1, 1.2, 1] }}
+          transition={{ duration: 0.5, repeat: Infinity, repeatDelay: 3 }}
+        >
+          <Zap size={16} className="text-amber-600 dark:text-amber-400" />
+        </motion.div>
+        <span className="text-sm font-semibold text-amber-900 dark:text-amber-200 tracking-wide">
           {t('quickList')}
         </span>
       </div>
 
       {/* Items List */}
-      <div className="flex-1 overflow-y-auto min-h-0">
+      <div className="flex-1 overflow-y-auto min-h-0 p-2">
         {items.length === 0 ? (
-          <div className="p-4 text-center text-gray-400 dark:text-gray-500 text-xs">
+          <div className="p-6 text-center text-amber-600/60 dark:text-amber-400/60 text-sm">
             {t('quickListEmpty')}
           </div>
         ) : (
-          <div className="divide-y divide-gray-100 dark:divide-gray-700">
+          <AnimatePresence>
             {items.map((item) => (
-              <div
+              <motion.div
                 key={item.id}
-                className="px-4 py-2 flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors group"
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="px-3 py-2 mb-1 flex items-center gap-2 hover:bg-amber-100/50 dark:hover:bg-amber-900/20 rounded-lg transition-colors group bg-white/50 dark:bg-gray-800/30"
               >
                 {editingId === item.id ? (
                   // Edit mode
@@ -232,14 +241,14 @@ export const QuickList = memo(({ user, t }) => {
                     )}
                   </>
                 )}
-              </div>
+              </motion.div>
             ))}
-          </div>
+          </AnimatePresence>
         )}
       </div>
 
       {/* Add Item Input */}
-      <div className="px-4 py-2 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex-shrink-0">
+      <div className="px-4 py-3 border-t border-amber-200 dark:border-amber-800/30 bg-amber-50/50 dark:bg-amber-950/20 flex-shrink-0 rounded-b-xl">
         <div className="flex gap-2">
           <input
             type="text"
@@ -247,13 +256,13 @@ export const QuickList = memo(({ user, t }) => {
             onChange={(e) => setNewItemText(e.target.value)}
             onKeyPress={handleKeyPress}
             placeholder={t('quickListPlaceholder')}
-            className="flex-1 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded px-2 py-1.5 text-sm outline-none focus:border-indigo-500"
+            className="flex-1 border border-amber-300 dark:border-amber-700 dark:bg-amber-950/30 rounded-lg px-3 py-2 text-sm outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200 dark:focus:ring-amber-800 bg-white dark:text-gray-200"
             aria-label={t('quickListPlaceholder')}
           />
           <select
             value={newItemPriority}
             onChange={(e) => setNewItemPriority(e.target.value)}
-            className="text-xs border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded px-2 py-1.5 outline-none focus:border-indigo-500"
+            className="text-xs border border-amber-300 dark:border-amber-700 dark:bg-amber-950/30 rounded-lg px-2 py-2 outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200 dark:focus:ring-amber-800 bg-white dark:text-gray-200"
             aria-label={t('labelPriority')}
           >
             <option value="low">{t('priorityLow')}</option>
@@ -262,7 +271,7 @@ export const QuickList = memo(({ user, t }) => {
           </select>
           <button
             onClick={handleAdd}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded text-sm flex items-center gap-1"
+            className="bg-amber-600 hover:bg-amber-700 text-white px-3 py-2 rounded-lg text-sm flex items-center gap-1 shadow-sm transition-colors"
             aria-label={t('addQuickItem')}
           >
             <Plus size={14} />

@@ -59,14 +59,17 @@ export const Header = memo(({
       <div className="flex items-center gap-2 sm:gap-4 overflow-x-auto sm:overflow-x-visible sm:justify-between scrollbar-hide w-full sm:w-auto" style={{ minWidth: 'max-content' }}>
         {/* Left Side - Logo, Title, Sidebar Toggle */}
         <div className="flex items-center gap-2 flex-shrink-0">
-          <button
-            onClick={onToggleSidebar}
-            className="p-1.5 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex-shrink-0"
-            title={isSidebarOpen ? t('hideSidebar') : t('showSidebar')}
-            aria-label={isSidebarOpen ? t('hideSidebar') : t('showSidebar')}
-          >
-            {isSidebarOpen ? <PanelLeftClose size={18} className="sm:w-5 sm:h-5" /> : <PanelLeftOpen size={18} className="sm:w-5 sm:h-5" />}
-          </button>
+          {/* Sidebar Toggle - Hidden (moved to sidebar navigation) */}
+          {false && (
+            <button
+              onClick={onToggleSidebar}
+              className="p-1.5 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex-shrink-0"
+              title={isSidebarOpen ? t('hideSidebar') : t('showSidebar')}
+              aria-label={isSidebarOpen ? t('hideSidebar') : t('showSidebar')}
+            >
+              {isSidebarOpen ? <PanelLeftClose size={18} className="sm:w-5 sm:h-5" /> : <PanelLeftOpen size={18} className="sm:w-5 sm:h-5" />}
+            </button>
+          )}
 
           <div className="bg-indigo-600 p-1 sm:p-1.5 rounded-lg flex-shrink-0 hidden sm:block">
             <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
@@ -104,6 +107,9 @@ export const Header = memo(({
               className="bg-transparent outline-none text-sm w-32 md:w-64 placeholder:text-gray-400 dark:text-gray-200"
               aria-label={t('searchPlaceholder')}
             />
+            <span className="text-[10px] text-gray-400 dark:text-gray-500 hidden lg:inline">
+              Q {t('forQuickList') || 'för snabblista'}
+            </span>
           </div>
 
           {/* Desktop: Language & Theme */}
@@ -224,42 +230,54 @@ export const Header = memo(({
                 <Download size={18} />
               </button>
             )}
-            <button
-              onClick={onOpenArchive}
-              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md text-gray-600 dark:text-gray-300"
-              title={t('archive')}
-              aria-label={t('archive')}
-            >
-              <Archive size={18} />
-            </button>
-            <button
-              onClick={onOpenTrash}
-              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md text-gray-600 dark:text-gray-300"
-              title={t('trash')}
-              aria-label={t('trash')}
-            >
-              <Trash2 size={18} />
-            </button>
-            <button
-              onClick={onOpenSettings}
-              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md text-gray-600 dark:text-gray-300"
-              title={t('settings')}
-              aria-label={t('settings')}
-            >
-              <Settings size={18} />
-            </button>
-            <button
-              onClick={onToggleDashboard}
-              className={`p-2 rounded-md text-gray-600 dark:text-gray-300 ${
-                isDashboardOpen 
-                  ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400' 
-                  : 'hover:bg-gray-100 dark:hover:bg-gray-700'
-              }`}
-              title={t('dashboard')}
-              aria-label={t('dashboard')}
-            >
-              <BarChart3 size={18} />
-            </button>
+            {/* Archive - Hidden (moved to sidebar navigation) */}
+            {false && (
+              <button
+                onClick={onOpenArchive}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md text-gray-600 dark:text-gray-300"
+                title={t('archive')}
+                aria-label={t('archive')}
+              >
+                <Archive size={18} />
+              </button>
+            )}
+            {/* Trash - Hidden (moved to sidebar navigation) */}
+            {false && (
+              <button
+                onClick={onOpenTrash}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md text-gray-600 dark:text-gray-300"
+                title={t('trash')}
+                aria-label={t('trash')}
+              >
+                <Trash2 size={18} />
+              </button>
+            )}
+            {/* Settings - Hidden (moved to sidebar navigation) */}
+            {false && (
+              <button
+                onClick={onOpenSettings}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md text-gray-600 dark:text-gray-300"
+                title={t('settings')}
+                aria-label={t('settings')}
+              >
+                <Settings size={18} />
+              </button>
+            )}
+            {/* Dashboard/Statistics - Hidden (moved to sidebar navigation) */}
+            {false && (
+              <button
+                onClick={onToggleDashboard}
+                className={`p-2 rounded-md text-gray-600 dark:text-gray-300 ${
+                  isDashboardOpen 
+                    ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400' 
+                    : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+                }`}
+                title={t('dashboard')}
+                aria-label={t('dashboard')}
+              >
+                <BarChart3 size={18} />
+              </button>
+            )}
             {onLogout && (
               <button
                 onClick={onLogout}
@@ -387,46 +405,58 @@ export const Header = memo(({
                 <span className="text-[10px]">{t('exportCSV')}</span>
               </button>
             )}
-            <button
-              onClick={() => { onOpenArchive(); setMobileMenuOpen(false); }}
-              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md text-gray-600 dark:text-gray-300 flex flex-col items-center gap-1"
-              title={t('archive')}
-              aria-label={t('archive')}
-            >
-              <Archive size={18} />
-              <span className="text-[10px]">{t('archive')}</span>
-            </button>
-            <button
-              onClick={() => { onOpenTrash(); setMobileMenuOpen(false); }}
-              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md text-gray-600 dark:text-gray-300 flex flex-col items-center gap-1"
-              title={t('trash')}
-              aria-label={t('trash')}
-            >
-              <Trash2 size={18} />
-              <span className="text-[10px]">{t('trash')}</span>
-            </button>
-            <button
-              onClick={() => { onOpenSettings(); setMobileMenuOpen(false); }}
-              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md text-gray-600 dark:text-gray-300 flex flex-col items-center gap-1"
-              title={t('settings')}
-              aria-label={t('settings')}
-            >
-              <Settings size={18} />
-              <span className="text-[10px]">{t('settings')}</span>
-            </button>
-            <button
-              onClick={() => { onToggleDashboard(); setMobileMenuOpen(false); }}
-              className={`p-2 rounded-md text-gray-600 dark:text-gray-300 flex flex-col items-center gap-1 ${
-                isDashboardOpen 
-                  ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400' 
-                  : 'hover:bg-gray-100 dark:hover:bg-gray-700'
-              }`}
-              title={t('dashboard')}
-              aria-label={t('dashboard')}
-            >
-              <BarChart3 size={18} />
-              <span className="text-[10px]">{t('dashboard')}</span>
-            </button>
+            {/* Archive - Hidden (moved to sidebar navigation) */}
+            {false && (
+              <button
+                onClick={() => { onOpenArchive(); setMobileMenuOpen(false); }}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md text-gray-600 dark:text-gray-300 flex flex-col items-center gap-1"
+                title={t('archive')}
+                aria-label={t('archive')}
+              >
+                <Archive size={18} />
+                <span className="text-[10px]">{t('archive')}</span>
+              </button>
+            )}
+            {/* Trash - Hidden (moved to sidebar navigation) */}
+            {false && (
+              <button
+                onClick={() => { onOpenTrash(); setMobileMenuOpen(false); }}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md text-gray-600 dark:text-gray-300 flex flex-col items-center gap-1"
+                title={t('trash')}
+                aria-label={t('trash')}
+              >
+                <Trash2 size={18} />
+                <span className="text-[10px]">{t('trash')}</span>
+              </button>
+            )}
+            {/* Settings - Hidden (moved to sidebar navigation) */}
+            {false && (
+              <button
+                onClick={() => { onOpenSettings(); setMobileMenuOpen(false); }}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md text-gray-600 dark:text-gray-300 flex flex-col items-center gap-1"
+                title={t('settings')}
+                aria-label={t('settings')}
+              >
+                <Settings size={18} />
+                <span className="text-[10px]">{t('settings')}</span>
+              </button>
+            )}
+            {/* Dashboard/Statistics - Hidden (moved to sidebar navigation) */}
+            {false && (
+              <button
+                onClick={() => { onToggleDashboard(); setMobileMenuOpen(false); }}
+                className={`p-2 rounded-md text-gray-600 dark:text-gray-300 flex flex-col items-center gap-1 ${
+                  isDashboardOpen 
+                    ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400' 
+                    : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+                }`}
+                title={t('dashboard')}
+                aria-label={t('dashboard')}
+              >
+                <BarChart3 size={18} />
+                <span className="text-[10px]">{t('dashboard')}</span>
+              </button>
+            )}
             {onLogout && (
               <button
                 onClick={() => { onLogout(); setMobileMenuOpen(false); }}
