@@ -3,6 +3,45 @@ import { onSnapshot, doc, setDoc } from 'firebase/firestore';
 import { db, isDemoModeAllowed, appId } from '../config/firebase';
 import { generateId } from '../utils/helpers';
 
+/**
+ * Sanitizes data for Firestore by removing undefined values
+ * Firestore doesn't allow undefined values, so we remove them recursively
+ * @param {any} data - Data to sanitize
+ * @return {any} Sanitized data without undefined values
+ */
+const sanitizeForFirestore_ = (data) => {
+  // Handle null/undefined
+  if (data === null || data === undefined) {
+    return null;
+  }
+  
+  // Handle arrays - sanitize each item and filter out nulls
+  if (Array.isArray(data)) {
+    return data
+      .map(item => sanitizeForFirestore_(item))
+      .filter(item => item !== null && item !== undefined);
+  }
+  
+  // Handle plain objects - remove undefined values recursively
+  if (typeof data === 'object' && data.constructor === Object) {
+    const sanitized = {};
+    for (const [key, value] of Object.entries(data)) {
+      // Skip undefined values entirely
+      if (value !== undefined) {
+        const sanitizedValue = sanitizeForFirestore_(value);
+        // Only add if sanitized value is not undefined
+        if (sanitizedValue !== undefined && sanitizedValue !== null) {
+          sanitized[key] = sanitizedValue;
+        }
+      }
+    }
+    return sanitized;
+  }
+  
+  // Return primitives as-is
+  return data;
+};
+
 export const useQuickList = (user) => {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -27,11 +66,19 @@ export const useQuickList = (user) => {
         const stored = localStorage.getItem('quick-list');
         if (stored) {
           const parsed = JSON.parse(stored);
-          // Ensure all items have priority (backward compatibility)
-          const itemsWithPriority = parsed.map(item => ({
-            ...item,
-            priority: item.priority || 'normal'
-          }));
+          // Ensure all items have required fields (backward compatibility)
+          const itemsWithPriority = (parsed || []).map(item => {
+            if (!item || !item.id) return null;
+            return {
+              ...item,
+              text: item.text || '',
+              done: item.done === true,
+              priority: item.priority || 'normal',
+              type: (item.type && typeof item.type === 'string' && item.type.trim()) ? item.type.trim() : undefined,
+              comment: (item.comment && typeof item.comment === 'string' && item.comment.trim()) ? item.comment.trim() : undefined,
+              createdAt: item.createdAt || new Date().toISOString(),
+            };
+          }).filter(item => item !== null);
           setItems(itemsWithPriority);
         } else {
           setItems([]);
@@ -54,25 +101,56 @@ export const useQuickList = (user) => {
         try {
           if (snapshot.exists()) {
             const data = snapshot.data();
-            // Ensure all items have priority (backward compatibility)
-            const itemsWithPriority = (data.items || []).map(item => ({
-              ...item,
-              priority: item.priority || 'normal'
-            }));
-            setItems(itemsWithPriority);
+            // Ensure all items have required fields (backward compatibility)
+            const itemsWithPriority = (data.items || []).map(item => {
+              if (!item || !item.id) return null;
+              return {
+                ...item,
+                text: item.text || '',
+                done: item.done === true,
+                priority: item.priority || 'normal',
+                type: (item.type && typeof item.type === 'string' && item.type.trim()) ? item.type.trim() : undefined,
+                comment: (item.comment && typeof item.comment === 'string' && item.comment.trim()) ? item.comment.trim() : undefined,
+                createdAt: item.createdAt || new Date().toISOString(),
+              };
+            }).filter(item => item !== null);
+            
+            // Only update if snapshot has same or more items (avoid overwriting optimistic updates)
+            setItems(prevItems => {
+              // If snapshot has same or more items, use snapshot (it's the source of truth)
+              // But if we have optimistic updates that aren't in snapshot yet, keep them temporarily
+              if (itemsWithPriority.length >= prevItems.length) {
+                console.log('[useQuickList] onSnapshot updating items', { 
+                  snapshotCount: itemsWithPriority.length,
+                  prevCount: prevItems.length 
+                });
+                return itemsWithPriority;
+              }
+              // Keep optimistic updates if snapshot is older (has fewer items)
+              console.log('[useQuickList] onSnapshot keeping optimistic updates', { 
+                snapshotCount: itemsWithPriority.length,
+                prevCount: prevItems.length 
+              });
+              return prevItems;
+            });
           } else {
-            setItems([]);
+            // Only set empty if we don't have optimistic updates
+            setItems(prevItems => {
+              if (prevItems.length > 0) {
+                console.log('[useQuickList] onSnapshot keeping optimistic updates (no snapshot data)');
+                return prevItems;
+              }
+              return [];
+            });
           }
           setLoading(false);
         } catch (e) {
           console.error('Error processing quick list snapshot:', e);
-          setItems([]);
           setLoading(false);
         }
       },
       (err) => {
         console.error('Firestore quick list listener error:', err);
-        setItems([]);
         setLoading(false);
       }
     );
@@ -82,49 +160,80 @@ export const useQuickList = (user) => {
     };
   }, [user]);
 
-  const addItem = async (text, priority = 'normal') => {
-    if (!text.trim()) return;
+  const addItem = async (text, priority = 'normal', type = '', comment = '') => {
+    if (!text || !text.trim()) return;
+
+    const trimmedText = text.trim();
+    if (!trimmedText) return;
 
     const newItem = {
       id: generateId(),
-      text: text.trim(),
+      text: trimmedText,
       done: false,
       priority: priority || 'normal',
+      // Only include type/comment if they have values (will be removed by sanitize if undefined)
+      ...(type && type.trim() ? { type: type.trim() } : {}),
+      ...(comment && comment.trim() ? { comment: comment.trim() } : {}),
       createdAt: new Date().toISOString(),
     };
 
     if (!user) return;
 
-    // Demo mode
-    if (user.uid && user.uid.startsWith('demo-user-')) {
-      if (!isDemoModeAllowed()) return;
-      try {
-        const updated = [...items, newItem];
-        localStorage.setItem('quick-list', JSON.stringify(updated));
-        setItems(updated);
-      } catch (e) {
-        console.error('Error saving quick list to localStorage:', e);
-      }
-      return;
-    }
+    // Log before update
+    console.log('[useQuickList] addItem called', { 
+      text: trimmedText, 
+      currentItemsCount: items.length,
+      newItemId: newItem.id 
+    });
 
-    // Firebase mode
-    try {
+    // Optimistic update: update state immediately
+    setItems(prevItems => {
+      const updated = [...prevItems, newItem];
+      
+      // Log after update
+      console.log('[useQuickList] addItem optimistic update', { 
+        prevCount: prevItems.length,
+        newCount: updated.length,
+        newItemId: newItem.id
+      });
+      
+      // Demo mode
+      if (user.uid && user.uid.startsWith('demo-user-')) {
+        if (!isDemoModeAllowed()) return prevItems;
+        try {
+          localStorage.setItem('quick-list', JSON.stringify(updated));
+          console.log('[useQuickList] addItem saved to localStorage', { count: updated.length });
+        } catch (e) {
+          console.error('Error saving quick list to localStorage:', e);
+          return prevItems;
+        }
+        return updated;
+      }
+
+      // Firebase mode - save in background
       const quickListRef = doc(db, 'artifacts', appId, 'users', user.uid, 'quickList', 'items');
-      const updated = [...items, newItem];
-      await setDoc(quickListRef, { items: updated }, { merge: true });
-      setItems(updated);
-    } catch (error) {
-      console.error('Error adding quick list item:', error);
-    }
+      const safePayload = sanitizeForFirestore_({ items: updated });
+      setDoc(quickListRef, safePayload, { merge: true })
+        .then(() => {
+          console.log('[useQuickList] addItem saved to Firebase', { count: updated.length });
+        })
+        .catch(error => {
+          console.error('Error adding quick list item to Firebase:', error);
+          // On error, revert to previous state
+          setItems(prevItems);
+        });
+
+      return updated;
+    });
   };
 
   const toggleItem = async (id) => {
-    if (!user) return;
+    if (!user || !id) return;
 
-    const updated = items.map((item) =>
-      item.id === id ? { ...item, done: !item.done } : item
-    );
+    const updated = items.map((item) => {
+      if (!item || !item.id) return item;
+      return item.id === id ? { ...item, done: !item.done } : item;
+    });
 
     // Demo mode
     if (user.uid && user.uid.startsWith('demo-user-')) {
@@ -141,7 +250,8 @@ export const useQuickList = (user) => {
     // Firebase mode
     try {
       const quickListRef = doc(db, 'artifacts', appId, 'users', user.uid, 'quickList', 'items');
-      await setDoc(quickListRef, { items: updated }, { merge: true });
+      const safePayload = sanitizeForFirestore_({ items: updated });
+      await setDoc(quickListRef, safePayload, { merge: true });
       setItems(updated);
     } catch (error) {
       console.error('Error toggling quick list item:', error);
@@ -149,12 +259,13 @@ export const useQuickList = (user) => {
   };
 
   const deleteItem = async (id) => {
-    if (!user) return;
+    if (!user || !id) return;
 
     // Soft delete - mark as deleted instead of removing
-    const updated = items.map((item) =>
-      item.id === id ? { ...item, deleted: true, deletedAt: new Date().toISOString() } : item
-    );
+    const updated = items.map((item) => {
+      if (!item || !item.id) return item;
+      return item.id === id ? { ...item, deleted: true, deletedAt: new Date().toISOString() } : item;
+    });
 
     // Demo mode
     if (user.uid && user.uid.startsWith('demo-user-')) {
@@ -171,7 +282,8 @@ export const useQuickList = (user) => {
     // Firebase mode
     try {
       const quickListRef = doc(db, 'artifacts', appId, 'users', user.uid, 'quickList', 'items');
-      await setDoc(quickListRef, { items: updated }, { merge: true });
+      const safePayload = sanitizeForFirestore_({ items: updated });
+      await setDoc(quickListRef, safePayload, { merge: true });
       setItems(updated);
     } catch (error) {
       console.error('Error deleting quick list item:', error);
@@ -179,11 +291,12 @@ export const useQuickList = (user) => {
   };
 
   const archiveItem = async (id) => {
-    if (!user) return;
+    if (!user || !id) return;
 
-    const updated = items.map((item) =>
-      item.id === id ? { ...item, archived: true, archivedAt: new Date().toISOString() } : item
-    );
+    const updated = items.map((item) => {
+      if (!item || !item.id) return item;
+      return item.id === id ? { ...item, archived: true, archivedAt: new Date().toISOString() } : item;
+    });
 
     // Demo mode
     if (user.uid && user.uid.startsWith('demo-user-')) {
@@ -200,7 +313,8 @@ export const useQuickList = (user) => {
     // Firebase mode
     try {
       const quickListRef = doc(db, 'artifacts', appId, 'users', user.uid, 'quickList', 'items');
-      await setDoc(quickListRef, { items: updated }, { merge: true });
+      const safePayload = sanitizeForFirestore_({ items: updated });
+      await setDoc(quickListRef, safePayload, { merge: true });
       setItems(updated);
     } catch (error) {
       console.error('Error archiving quick list item:', error);
@@ -229,7 +343,8 @@ export const useQuickList = (user) => {
     // Firebase mode
     try {
       const quickListRef = doc(db, 'artifacts', appId, 'users', user.uid, 'quickList', 'items');
-      await setDoc(quickListRef, { items: updated }, { merge: true });
+      const safePayload = sanitizeForFirestore_({ items: updated });
+      await setDoc(quickListRef, safePayload, { merge: true });
       setItems(updated);
     } catch (error) {
       console.error('Error restoring quick list item:', error);
@@ -256,19 +371,37 @@ export const useQuickList = (user) => {
     // Firebase mode
     try {
       const quickListRef = doc(db, 'artifacts', appId, 'users', user.uid, 'quickList', 'items');
-      await setDoc(quickListRef, { items: updated }, { merge: true });
+      const safePayload = sanitizeForFirestore_({ items: updated });
+      await setDoc(quickListRef, safePayload, { merge: true });
       setItems(updated);
     } catch (error) {
       console.error('Error permanently deleting quick list item:', error);
     }
   };
 
-  const updateItemText = async (id, text, priority) => {
-    if (!user || !text.trim()) return;
+  const updateItemText = async (id, text, priority, type = '', comment = '') => {
+    if (!user || !id || !text || !text.trim()) return;
 
-    const updated = items.map((item) =>
-      item.id === id ? { ...item, text: text.trim(), priority: priority || item.priority || 'normal' } : item
-    );
+    const trimmedText = text.trim();
+    if (!trimmedText) return;
+
+    const updated = items.map((item) => {
+      if (!item || !item.id) return item;
+      if (item.id !== id) return item;
+      const updatedItem = { 
+        ...item, 
+        text: trimmedText, 
+        priority: priority || item.priority || 'normal',
+      };
+      // Only include type/comment if they have values (sanitize will remove undefined)
+      if (type && type.trim()) {
+        updatedItem.type = type.trim();
+      }
+      if (comment && comment.trim()) {
+        updatedItem.comment = comment.trim();
+      }
+      return updatedItem;
+    });
 
     // Demo mode
     if (user.uid && user.uid.startsWith('demo-user-')) {
@@ -285,7 +418,8 @@ export const useQuickList = (user) => {
     // Firebase mode
     try {
       const quickListRef = doc(db, 'artifacts', appId, 'users', user.uid, 'quickList', 'items');
-      await setDoc(quickListRef, { items: updated }, { merge: true });
+      const safePayload = sanitizeForFirestore_({ items: updated });
+      await setDoc(quickListRef, safePayload, { merge: true });
       setItems(updated);
     } catch (error) {
       console.error('Error updating quick list item text:', error);
@@ -314,7 +448,8 @@ export const useQuickList = (user) => {
     // Firebase mode
     try {
       const quickListRef = doc(db, 'artifacts', appId, 'users', user.uid, 'quickList', 'items');
-      await setDoc(quickListRef, { items: updated }, { merge: true });
+      const safePayload = sanitizeForFirestore_({ items: updated });
+      await setDoc(quickListRef, safePayload, { merge: true });
       setItems(updated);
     } catch (error) {
       console.error('Error updating quick list item priority:', error);

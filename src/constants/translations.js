@@ -115,6 +115,13 @@ export const TRANSLATIONS = {
     priorityNormal: 'Normal',
     priorityHigh: 'Hög',
     phTags: 'Skriv taggar, tryck Enter för att lägga till',
+    // Type & Comment
+    labelType: 'Typ',
+    typeJob: 'Jobb',
+    typePrivate: 'Privat',
+    typeNone: 'Ingen',
+    labelComment: 'Kommentar',
+    commentPlaceholder: 'Lägg till en kommentar...',
     // Saved Views
     savedViews: 'Sparade vyer',
     saveView: 'Spara vy',
@@ -398,6 +405,13 @@ export const TRANSLATIONS = {
     priorityNormal: 'Normal',
     priorityHigh: 'High',
     phTags: 'Type tags, press Enter to add',
+    // Type & Comment
+    labelType: 'Type',
+    typeJob: 'Job',
+    typePrivate: 'Private',
+    typeNone: 'None',
+    labelComment: 'Comment',
+    commentPlaceholder: 'Add a comment...',
     // Saved Views
     savedViews: 'Saved Views',
     saveView: 'Save View',

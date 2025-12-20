@@ -22,6 +22,10 @@
  */
 
 /**
+ * @typedef {('job'|'private')} TaskType
+ */
+
+/**
  * @typedef {Object} Task
  * @property {string} id - Unique identifier
  * @property {string} client - Client name
@@ -39,6 +43,8 @@
  * @property {ChecklistItem[]} [checklist] - Subtasks/checklist items
  * @property {string[]} [tags] - Tags array
  * @property {Priority} [priority] - Priority level
+ * @property {TaskType} [type] - Task type: 'job' or 'private'
+ * @property {string} [comment] - Task comment
  * @property {boolean} [deleted] - Deletion flag
  * @property {string|null} [deletedAt] - Deletion timestamp
  * @property {string} [createdAt] - Creation timestamp
