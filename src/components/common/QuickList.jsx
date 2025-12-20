@@ -1,11 +1,11 @@
 import { memo, useState, useEffect } from 'react';
-import { CheckSquare, Plus, Trash2, List, Circle, Edit2, Archive, X, Check, Zap, MessageSquare } from 'lucide-react';
+import { Plus, Trash2, List, Circle, Edit2, Archive, X, Check, Zap, MessageSquare } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuickList } from '../../hooks/useQuickList';
 import { showSuccess } from '../../utils/toast';
 
 export const QuickList = memo(({ user, t }) => {
-  const { items, loading, addItem, toggleItem, deleteItem, archiveItem, updateItemPriority, updateItemText } = useQuickList(user);
+  const { items, loading, addItem, deleteItem, archiveItem, updateItemPriority, updateItemText } = useQuickList(user);
   const [newItemText, setNewItemText] = useState('');
   const [newItemPriority, setNewItemPriority] = useState('normal');
   const [newItemType, setNewItemType] = useState('');
@@ -219,20 +219,8 @@ export const QuickList = memo(({ user, t }) => {
                 ) : (
                   // View mode
                   <>
-                    <button
-                      onClick={() => toggleItem(item.id)}
-                      className={`p-0.5 rounded ${
-                        item.done
-                          ? 'text-green-500'
-                          : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
-                      }`}
-                      aria-label={item.done ? t('markAsIncomplete') : t('markAsComplete')}
-                      aria-checked={item.done}
-                    >
-                      <CheckSquare size={16} className={item.done ? 'fill-current' : ''} />
-                    </button>
                     {/* Priority indicator */}
-                    {!item.done && item.priority && (
+                    {item.priority && (
                       <Circle 
                         size={8} 
                         className={`${getPriorityColorClass(item.priority || 'normal')} fill-current flex-shrink-0`} 
@@ -252,13 +240,7 @@ export const QuickList = memo(({ user, t }) => {
                         {item.type === 'job' ? '🟦' : '🟪'} {item.type === 'job' ? t('typeJob') : t('typePrivate')}
                       </span>
                     )}
-                    <span
-                      className={`flex-1 text-sm ${
-                        item.done
-                          ? 'line-through text-gray-400'
-                          : 'text-gray-700 dark:text-gray-200'
-                      }`}
-                    >
+                    <span className="flex-1 text-sm text-gray-700 dark:text-gray-200">
                       {item.text || ''}
                     </span>
                     {/* Comment icon */}
@@ -344,46 +326,30 @@ export const QuickList = memo(({ user, t }) => {
                         )}
                       </div>
                     )}
-                    {/* Action buttons - only show for non-done items */}
-                    {!item.done && (
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button
-                          onClick={() => handleStartEdit(item)}
-                          className="p-1 text-gray-400 hover:text-indigo-500"
-                          aria-label={t('editQuickItem')}
-                        >
-                          <Edit2 size={14} />
-                        </button>
-                        <button
-                          onClick={() => handleArchive(item.id)}
-                          className="p-1 text-gray-400 hover:text-yellow-500"
-                          aria-label={t('archiveQuickItem')}
-                        >
-                          <Archive size={14} />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(item.id)}
-                          className="p-1 text-gray-400 hover:text-red-500"
-                          aria-label={t('deleteQuickItem')}
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    )}
-                    {/* Priority selector - only show for done items */}
-                    {item.done && (
-                      <select
-                        value={item.priority || 'normal'}
-                        onChange={(e) => updateItemPriority(item.id, e.target.value)}
-                        onClick={(e) => e.stopPropagation()}
-                        className="text-xs border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded px-1.5 py-0.5 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer outline-none focus:ring-1 focus:ring-indigo-500"
-                        aria-label={t('labelPriority')}
+                    {/* Action buttons */}
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={() => handleStartEdit(item)}
+                        className="p-1 text-gray-400 hover:text-indigo-500"
+                        aria-label={t('editQuickItem')}
                       >
-                        <option value="low">{t('priorityLow')}</option>
-                        <option value="normal">{t('priorityNormal')}</option>
-                        <option value="high">{t('priorityHigh')}</option>
-                      </select>
-                    )}
+                        <Edit2 size={14} />
+                      </button>
+                      <button
+                        onClick={() => handleArchive(item.id)}
+                        className="p-1 text-gray-400 hover:text-yellow-500"
+                        aria-label={t('archiveQuickItem')}
+                      >
+                        <Archive size={14} />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(item.id)}
+                        className="p-1 text-gray-400 hover:text-red-500"
+                        aria-label={t('deleteQuickItem')}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
                   </>
                 )}
               </motion.div>
