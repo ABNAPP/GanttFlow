@@ -15,4 +15,5 @@ export {
   validateTaskForm,
   hasOverdueChecklistItems,
   getTaskOverallStatus,
+  getTaskDisplayStatus,
 } from './task';

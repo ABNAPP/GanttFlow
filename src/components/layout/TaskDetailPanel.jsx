@@ -1,7 +1,7 @@
 // Task Detail Panel - Right side panel for task details
 import { memo, useEffect } from 'react';
 import { X, Calendar, User, Tag, FileText, MessageSquare, AlertTriangle } from 'lucide-react';
-import { getTaskOverallStatus, calculateChecklistProgress } from '../../utils/helpers';
+import { getTaskOverallStatus, calculateChecklistProgress, getTaskDisplayStatus } from '../../utils/helpers';
 
 export const TaskDetailPanel = memo(({
   task,
@@ -129,15 +129,23 @@ export const TaskDetailPanel = memo(({
             <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
               {t('status') || 'Status'}
             </div>
-            <div className={`inline-block px-2 py-1 rounded text-xs font-medium ${
-              task.status === 'Klar' || task.status === 'Done'
-                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                : task.status === 'Pågående' || task.status === 'Progress'
-                ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-                : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
-            }`}>
-              {task.status || t('statusPlan')}
-            </div>
+            {(() => {
+              // Use display status (may be 'Försenad' if overdue)
+              const { status: displayStatus } = getTaskDisplayStatus(task);
+              return (
+                <div className={`inline-block px-2 py-1 rounded text-xs font-medium ${
+                  displayStatus === 'Klar'
+                    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                    : displayStatus === 'Pågående'
+                    ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                    : displayStatus === 'Försenad'
+                    ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                    : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+                }`}>
+                  {displayStatus}
+                </div>
+              );
+            })()}
           </div>
         </div>
 

@@ -11,6 +11,64 @@ export const checkIsDone = (status) => {
 };
 
 /**
+ * Get display status for a task (SINGLE SOURCE OF TRUTH for status display)
+ * This function is used EVERYWHERE in UI to ensure consistent status display
+ * 
+ * Rules:
+ * A) If task is Klar/done => return "Klar" (oavsett datum)
+ * B) Else if endDate exists and endDate < today (day-level comparison) => "Försenad" (reason: "dateOverdue")
+ * C) Else => task.status (fallback to "Planerad" if missing) (reason: "stored")
+ * 
+ * IMPORTANT: 'Försenad' is NEVER saved to task.status. It's only for display.
+ * 
+ * @param {Object} task - Task object
+ * @param {Date} nowDate - Current date (defaults to new Date())
+ * @returns {Object} { status: string, reason: string }
+ *   - status: "Planerad" | "Pågående" | "Klar" | "Försenad"
+ *   - reason: "dateOverdue" | "stored"
+ */
+export const getTaskDisplayStatus = (task, nowDate = new Date()) => {
+  if (!task) return { status: 'Planerad', reason: 'stored' };
+  
+  const rawStatus = task.status || 'Planerad';
+  const normalizedStatus = rawStatus.toLowerCase();
+  
+  // Rule A: If task is "Klar", always return "Klar"
+  if (checkIsDone(normalizedStatus)) {
+    return { status: 'Klar', reason: 'stored' };
+  }
+  
+  // Rule B: Check if task is overdue based on endDate (day-level comparison)
+  if (task.endDate) {
+    const end = new Date(task.endDate);
+    const today = new Date(nowDate);
+    
+    // Normalize to day-level (YYYY-MM-DD) for stable comparison
+    today.setHours(0, 0, 0, 0);
+    end.setHours(0, 0, 0, 0);
+    
+    // If endDate < today and task is not done => display "Försenad"
+    if (end < today) {
+      return { status: 'Försenad', reason: 'dateOverdue' };
+    }
+  }
+  
+  // Rule C: Return raw status (normalized to standard format)
+  if (normalizedStatus.includes('planerad') || normalizedStatus.includes('planned')) {
+    return { status: 'Planerad', reason: 'stored' };
+  }
+  if (normalizedStatus.includes('pågående') || normalizedStatus.includes('progress')) {
+    return { status: 'Pågående', reason: 'stored' };
+  }
+  if (normalizedStatus.includes('försenad') || normalizedStatus.includes('delayed')) {
+    return { status: 'Försenad', reason: 'stored' };
+  }
+  
+  // Default fallback
+  return { status: 'Planerad', reason: 'stored' };
+};
+
+/**
  * Get time status (overdue/warning) for a task or checklist item
  * Source: src/utils/helpers.js - getTimeStatus
  */

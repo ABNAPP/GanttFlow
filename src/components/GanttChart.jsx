@@ -1,6 +1,6 @@
 import { useMemo, memo, useCallback } from 'react';
 import { ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react';
-import { getDaysArray, getTimeStatus, calculateChecklistProgress, isRedDay, getStatusColor } from '../utils/helpers';
+import { getDaysArray, getTimeStatus, calculateChecklistProgress, isRedDay, getStatusColor, getTaskDisplayStatus } from '../utils/helpers';
 import { ZOOM_LEVELS } from '../constants';
 
 // Helper function to calculate task style
@@ -176,11 +176,11 @@ export const GanttChart = memo(({
                       className="relative h-[40px] border-b border-gray-50/50 dark:border-gray-800/50 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group"
                     >
                       <div
-                        className={`absolute top-2 h-6 shadow-sm cursor-grab active:cursor-grabbing flex items-center justify-center text-white text-[10px] z-10 group-hover:brightness-95 transition-all select-none overflow-hidden ${getStatusColor(
-                          task.status,
-                          style.isMilestone,
-                          isOverdue
-                        )}`}
+                        className={`absolute top-2 h-6 shadow-sm cursor-grab active:cursor-grabbing flex items-center justify-center text-white text-[10px] z-10 group-hover:brightness-95 transition-all select-none overflow-hidden ${(() => {
+                          // Use display status (may be 'Försenad' if overdue)
+                          const { status: displayStatus } = getTaskDisplayStatus(task);
+                          return getStatusColor(displayStatus, style.isMilestone, isOverdue);
+                        })()}`}
                         style={{
                           left: style.left,
                           width: style.width,

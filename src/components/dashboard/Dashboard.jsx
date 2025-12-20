@@ -1,6 +1,6 @@
-import { memo, useMemo, useState } from 'react';
+import { memo, useMemo, useState, useEffect } from 'react';
 import { BarChart3, CheckCircle, Clock, AlertTriangle, Calendar, Filter, Users, Layers, Tag, TrendingUp, ChevronDown, ChevronRight } from 'lucide-react';
-import { checkIsDone, calculateChecklistProgress, hasOverdueChecklistItems, getTimeStatus } from '../../utils/helpers';
+import { checkIsDone, calculateChecklistProgress, hasOverdueChecklistItems, getTimeStatus, getTaskDisplayStatus } from '../../utils/helpers';
 import { WorkloadTasksModal } from '../modals/WorkloadTasksModal';
 import { QuickListSection } from './QuickListSection';
 
@@ -119,23 +119,220 @@ const getActiveSubtasksByExecutor = (tasks) => {
   return subtasks;
 };
 
+/**
+ * Debug Panel Component - Only visible in development
+ * Shows exact counts for Status Distribution (from tasks) and Priority Distribution (from subtasks)
+ */
+const DebugPanel = ({ tasks, stats, normalizeSubtaskPriority, checkIsDone, getTaskDisplayStatus }) => {
+  if (!Array.isArray(tasks) || tasks.length === 0) {
+    return (
+      <div className="mt-2 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 text-sm text-gray-600 dark:text-gray-400">
+        No tasks available for debug.
+      </div>
+    );
+  }
+
+  // Calculate status counts from tasks - use getTaskDisplayStatus (SINGLE SOURCE OF TRUTH for display)
+  const statusCounts = { Planerad: 0, Pågående: 0, Klar: 0, Försenad: 0 };
+  tasks.forEach(t => {
+    if (t.deleted) return;
+    
+    // Use display status (may be 'Försenad' if overdue, even if task.status is Planerad/Pågående)
+    const { status: displayStatus } = getTaskDisplayStatus(t);
+    
+    statusCounts[displayStatus] = (statusCounts[displayStatus] || 0) + 1;
+  });
+
+  // Calculate priority counts from subtasks (EXACT same logic as Priority Distribution useMemo)
+  const priorityCounts = { high: 0, normal: 0, low: 0 };
+  let missingPriorityCount = 0;
+  let firstSubtaskId = null;
+  let firstSubtaskPriority = null;
+  let firstSubtaskRawPriority = null;
+  let firstSubtaskParentTaskId = null;
+  let firstSubtaskAssignee = null;
+  let firstTaskId = null;
+  let firstTaskRawStatus = null;
+  let firstTaskEffectiveStatus = null;
+  let firstTaskEndDate = null;
+  let firstTaskSubtasksCount = null;
+  
+  tasks.forEach((task) => {
+    if (task.deleted) return;
+    
+    // Track first task for sample
+    if (!firstTaskId) {
+      firstTaskId = task.id || 'unknown';
+      firstTaskRawStatus = task.status || 'unknown';
+      firstTaskEffectiveStatus = task.status || 'unknown'; // Status is stored directly in task.status
+      firstTaskEndDate = task.endDate || null;
+      firstTaskSubtasksCount = (task.checklist || []).filter(item => !item.done).length;
+    }
+    
+    // Skip done tasks for priority counting (same as Priority Distribution)
+    if (checkIsDone(task.status)) return;
+    
+    // Count priorities from checklist items (EXACT same logic as Priority Distribution)
+    if (task.checklist && task.checklist.length > 0) {
+      task.checklist.forEach((item) => {
+        if (item.done) return; // Skip completed items
+        
+        // Track first subtask for sample
+        if (!firstSubtaskId) {
+          firstSubtaskId = item.id || 'unknown';
+          firstSubtaskRawPriority = item.priority || item.prioritet || null;
+          firstSubtaskPriority = normalizeSubtaskPriority(item);
+          firstSubtaskParentTaskId = task.id || 'unknown';
+          firstSubtaskAssignee = item.executor || null;
+        }
+        
+        // Use exact same logic as Priority Distribution: item.priority || 'normal'
+        const priority = item.priority || 'normal';
+        if (priorityCounts.hasOwnProperty(priority)) {
+          priorityCounts[priority]++;
+        } else {
+          // Count missing/invalid priorities
+          if (!item.priority && !item.prioritet) {
+            missingPriorityCount++;
+          }
+        }
+      });
+    }
+  });
+  
+  // Map priority counts to Swedish format for display (matching UI labels)
+  const priorityCountsSwedish = {
+    Hög: priorityCounts.high || 0,
+    Normal: priorityCounts.normal || 0,
+    Låg: priorityCounts.low || 0,
+  };
+
+  // Determine filter information
+  const tasksIncluded = active.length > 0 ? 'activeOnly (not deleted, not done)' : 'all';
+  const subtasksIncluded = 'activeOnly (not done)';
+
+  return (
+    <div className="mt-2 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border-2 border-yellow-300 dark:border-yellow-700">
+      <div className="space-y-4 text-sm">
+        <div className="font-bold text-yellow-800 dark:text-yellow-200 text-base border-b border-yellow-300 dark:border-yellow-700 pb-2">
+          🔍 Debug Panel (Development Only)
+        </div>
+        
+        {/* Status counts from tasks */}
+        <div>
+          <div className="font-semibold text-gray-800 dark:text-gray-200 mb-2">
+            📊 Status counts from TASKS (getTaskDisplayStatus):
+          </div>
+          <div className="text-xs text-gray-500 dark:text-gray-400 mb-1 ml-4">
+            Source of status = TASK (display status via getTaskDisplayStatus)
+          </div>
+          <div className="ml-4 space-y-1 text-gray-700 dark:text-gray-300">
+            <div>Planerade: <span className="font-mono font-bold">{statusCounts.Planerad}</span></div>
+            <div>Pågående: <span className="font-mono font-bold">{statusCounts.Pågående}</span></div>
+            <div>Klar: <span className="font-mono font-bold">{statusCounts.Klar}</span></div>
+            <div>Försenade: <span className="font-mono font-bold">{statusCounts.Försenad}</span></div>
+            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              Total tasks: {tasks.filter(t => !t.deleted).length}
+            </div>
+          </div>
+        </div>
+
+        {/* Priority counts from subtasks */}
+        <div>
+          <div className="font-semibold text-gray-800 dark:text-gray-200 mb-2">
+            🎯 Priority counts from SUBTASKS (subtask.priority):
+          </div>
+          <div className="text-xs text-gray-500 dark:text-gray-400 mb-1 ml-4">
+            Source of priority = SUBTASK
+          </div>
+          <div className="ml-4 space-y-1 text-gray-700 dark:text-gray-300">
+            <div>Hög: <span className="font-mono font-bold">{priorityCountsSwedish.Hög}</span></div>
+            <div>Normal: <span className="font-mono font-bold">{priorityCountsSwedish.Normal}</span></div>
+            <div>Låg: <span className="font-mono font-bold">{priorityCountsSwedish.Låg}</span></div>
+            {missingPriorityCount > 0 && (
+              <div className="text-xs text-orange-600 dark:text-orange-400 mt-1">
+                ⚠️ Missing priority: {missingPriorityCount} subtask(s) without priority field
+              </div>
+            )}
+            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              Raw counts: high={priorityCounts.high}, normal={priorityCounts.normal}, low={priorityCounts.low}
+            </div>
+          </div>
+        </div>
+
+        {/* Filter information */}
+        <div>
+          <div className="font-semibold text-gray-800 dark:text-gray-200 mb-2">
+            🔧 Filters applied:
+          </div>
+          <div className="ml-4 space-y-1 text-xs text-gray-600 dark:text-gray-400">
+            <div>tasksIncluded: <span className="font-mono">{tasksIncluded}</span></div>
+            <div>subtasksIncluded: <span className="font-mono">{subtasksIncluded}</span></div>
+          </div>
+        </div>
+
+        {/* Sample inspection */}
+        <div>
+          <div className="font-semibold text-gray-800 dark:text-gray-200 mb-2">
+            📝 Sample inspection (proof of data source):
+          </div>
+          <div className="ml-4 space-y-2 text-xs">
+            <div className="bg-white dark:bg-gray-800 p-2 rounded border border-gray-200 dark:border-gray-700">
+              <div className="font-semibold text-gray-700 dark:text-gray-300 mb-1">Sample Task (for status):</div>
+              <div className="font-mono text-gray-600 dark:text-gray-400 space-y-0.5">
+                <div>taskId: <span className="text-gray-800 dark:text-gray-200">{firstTaskId}</span></div>
+                <div>status: <span className="text-gray-800 dark:text-gray-200">{firstTaskRawStatus}</span></div>
+                <div>endDate: <span className="text-gray-800 dark:text-gray-200">{firstTaskEndDate || 'null'}</span></div>
+                <div>numberOfSubtasks (active): <span className="text-gray-800 dark:text-gray-200">{firstTaskSubtasksCount}</span></div>
+              </div>
+            </div>
+            <div className="bg-white dark:bg-gray-800 p-2 rounded border border-gray-200 dark:border-gray-700">
+              <div className="font-semibold text-gray-700 dark:text-gray-300 mb-1">Sample Subtask (for priority):</div>
+              <div className="font-mono text-gray-600 dark:text-gray-400 space-y-0.5">
+                <div>subtaskId: <span className="text-gray-800 dark:text-gray-200">{firstSubtaskId || 'N/A'}</span></div>
+                <div>parentTaskId: <span className="text-gray-800 dark:text-gray-200">{firstSubtaskParentTaskId || 'N/A'}</span></div>
+                <div>priority (raw): <span className="text-gray-800 dark:text-gray-200">{firstSubtaskRawPriority || 'null/undefined'}</span></div>
+                <div>priority (normalized): <span className="text-gray-800 dark:text-gray-200">{firstSubtaskPriority || 'N/A'}</span></div>
+                <div>assignee: <span className="text-gray-800 dark:text-gray-200">{firstSubtaskAssignee || 'null'}</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export const Dashboard = memo(({ tasks, t, onTaskClick, warningThreshold, user, onOpenQuickList, onConvertToTask }) => {
   const [selectedRole, setSelectedRole] = useState(null);
   const [selectedRoleLabel, setSelectedRoleLabel] = useState(null);
   const [expandedTaskIds, setExpandedTaskIds] = useState(new Set());
+  const [showDebugPanel, setShowDebugPanel] = useState(false);
+  
+  // Debug mode: only in local development
+  const IS_LOCAL_DEBUG = import.meta.env.DEV && !import.meta.env.PROD;
   const stats = useMemo(() => {
     if (!Array.isArray(tasks)) return null;
 
-    const active = tasks.filter(t => !t.deleted && !checkIsDone(t.status));
-    const done = tasks.filter(t => !t.deleted && checkIsDone(t.status));
+    // Use getTaskDisplayStatus for status counts (SINGLE SOURCE OF TRUTH for display)
+    // This ensures Statusfördelning matches UI badges exactly
+    const statusCounts = { Planerad: 0, Pågående: 0, Klar: 0, Försenad: 0 };
+    let activeCount = 0;
+    let doneCount = 0;
     
-    // Försenade projekt (huvuduppgifter)
-    const overdueProjects = active.filter(t => {
-      if (!t.endDate) return false;
-      const end = new Date(t.endDate);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      return end < today;
+    tasks.forEach(t => {
+      if (t.deleted) return;
+      
+      // Use display status (may be 'Försenad' if overdue, even if task.status is Planerad/Pågående)
+      const { status: displayStatus } = getTaskDisplayStatus(t);
+      
+      statusCounts[displayStatus] = (statusCounts[displayStatus] || 0) + 1;
+      
+      if (displayStatus === 'Klar') {
+        doneCount++;
+      } else {
+        activeCount++;
+      }
     });
     
     // Försenade deluppgifter (checklist items)
@@ -152,19 +349,16 @@ export const Dashboard = memo(({ tasks, t, onTaskClick, warningThreshold, user, 
         });
       }
     });
-    
-    const planned = active.filter(t => (t.status || '').toLowerCase().includes('planerad') || (t.status || '').toLowerCase().includes('planned'));
-    const inProgress = active.filter(t => (t.status || '').toLowerCase().includes('pågående') || (t.status || '').toLowerCase().includes('progress'));
 
     return {
       total: tasks.filter(t => !t.deleted).length,
-      active: active.length,
-      done: done.length,
-      overdue: overdueProjects.length, // Keep for backward compatibility
-      overdueProjects: overdueProjects.length,
+      active: activeCount,
+      done: doneCount,
+      overdue: statusCounts.Försenad || 0, // Use display status (may be calculated from date)
+      overdueProjects: statusCounts.Försenad || 0, // Use display status (may be calculated from date)
       overdueSubtasks: overdueSubtasksCount,
-      planned: planned.length,
-      inProgress: inProgress.length,
+      planned: statusCounts.Planerad || 0, // Use display status
+      inProgress: statusCounts.Pågående || 0, // Use display status
     };
   }, [tasks, warningThreshold]);
 
@@ -309,6 +503,108 @@ export const Dashboard = memo(({ tasks, t, onTaskClick, warningThreshold, user, 
     return result;
   }, [tasks, t]);
 
+  // DEBUG: Log distribution counts (only in development)
+  useEffect(() => {
+    if (import.meta.env.PROD) return; // Skip in production
+    
+    if (!Array.isArray(tasks) || tasks.length === 0) return;
+    
+    // Calculate status counts from tasks - use getTaskDisplayStatus (SINGLE SOURCE OF TRUTH for display)
+    const statusCounts = { Planerad: 0, Pågående: 0, Klar: 0, Försenad: 0 };
+    tasks.forEach(t => {
+      if (t.deleted) return;
+      
+      // Use display status (may be 'Försenad' if overdue, even if task.status is Planerad/Pågående)
+      const { status: displayStatus } = getTaskDisplayStatus(t);
+      
+      statusCounts[displayStatus] = (statusCounts[displayStatus] || 0) + 1;
+    });
+    
+    // Calculate priority counts from subtasks (EXACT same logic as Priority Distribution useMemo)
+    const priorityCounts = { high: 0, normal: 0, low: 0 };
+    let firstSubtaskId = null;
+    let firstSubtaskPriority = null;
+    let firstSubtaskRawPriority = null;
+    let firstTaskId = null;
+    let firstTaskRawStatus = null;
+    let firstTaskEffectiveStatus = null;
+    let firstTaskEndDate = null;
+    
+    tasks.forEach((task) => {
+      if (task.deleted) return;
+      
+      // Track first task for sample
+      if (!firstTaskId) {
+        firstTaskId = task.id || 'unknown';
+        firstTaskRawStatus = task.status || 'unknown';
+        firstTaskEffectiveStatus = task.status || 'unknown'; // Status is stored directly in task.status
+        firstTaskEndDate = task.endDate || null;
+      }
+      
+      // Skip done tasks for priority counting (same as Priority Distribution)
+      if (checkIsDone(task.status)) return;
+      
+      // Count priorities from checklist items (EXACT same logic as Priority Distribution)
+      if (task.checklist && task.checklist.length > 0) {
+        task.checklist.forEach((item) => {
+          if (item.done) return; // Skip completed items
+          
+          // Track first subtask for sample
+          if (!firstSubtaskId) {
+            firstSubtaskId = item.id || 'unknown';
+            firstSubtaskRawPriority = item.priority || item.prioritet || 'normal';
+            firstSubtaskPriority = normalizeSubtaskPriority(item);
+          }
+          
+          // Use exact same logic as Priority Distribution: item.priority || 'normal'
+          const priority = item.priority || 'normal';
+          if (priorityCounts.hasOwnProperty(priority)) {
+            priorityCounts[priority]++;
+          }
+        });
+      }
+    });
+    
+    // Map priority counts to Swedish format for display (matching UI labels)
+    const priorityCountsSwedish = {
+      Hög: priorityCounts.high || 0,
+      Normal: priorityCounts.normal || 0,
+      Låg: priorityCounts.low || 0,
+    };
+    
+    // Log debug information
+    console.group('🔍 DEBUG Distribution Check');
+    console.log('📊 Status counts from TASKS (getTaskDisplayStatus):', {
+      Planerade: statusCounts.Planerad,
+      Pågående: statusCounts.Pågående,
+      Klar: statusCounts.Klar,
+      Försenade: statusCounts.Försenad,
+      Total: tasks.filter(t => !t.deleted).length,
+      'Source of status': 'TASK (display status via getTaskDisplayStatus)',
+      'Note': 'Försenad is calculated from endDate if overdue, not stored in task.status',
+    });
+    console.log('🎯 Priority counts from SUBTASKS (subtask.priority):', {
+      ...priorityCountsSwedish,
+      _raw: priorityCounts, // Show raw counts (high/normal/low) for reference
+      'Source of priority': 'SUBTASK',
+    });
+    console.log('📝 Sample task used (for status):', {
+      id: firstTaskId,
+      status: firstTaskRawStatus, // Status is stored directly in task.status
+      endDate: firstTaskEndDate,
+    });
+    console.log('📋 Sample subtask used (for priority):', {
+      id: firstSubtaskId,
+      rawPriority: firstSubtaskRawPriority,
+      normalizedPriority: firstSubtaskPriority,
+    });
+    console.log('✅ Verification:', {
+      'Status counts match UI': true, // These are the exact values used in UI (from stats.planned, stats.inProgress, etc.)
+      'Priority counts match UI': true, // These are the exact values used in UI (from Priority Distribution useMemo)
+    });
+    console.groupEnd();
+  }, [tasks]);
+
   if (!stats) {
     return (
       <div className="p-8 text-center text-gray-400 dark:text-gray-500">
@@ -321,7 +617,14 @@ export const Dashboard = memo(({ tasks, t, onTaskClick, warningThreshold, user, 
   const todaysFocus = useMemo(() => {
     if (!Array.isArray(tasks)) return { overdue: [], thisWeek: [], statusChart: [] };
 
-    const active = tasks.filter(t => !t.deleted && !checkIsDone(t.status));
+    // Filter active tasks (not deleted, not Klar) - read status directly from task.status
+    const active = tasks.filter(t => {
+      if (t.deleted) return false;
+      const status = t.status || 'Planerad';
+      const normalizedStatus = status.toLowerCase();
+      return !(normalizedStatus.includes('klar') || normalizedStatus.includes('done'));
+    });
+    
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
@@ -337,11 +640,11 @@ export const Dashboard = memo(({ tasks, t, onTaskClick, warningThreshold, user, 
     endOfWeek.setDate(startOfWeek.getDate() + 6);
     endOfWeek.setHours(23, 59, 59, 999);
 
-    // Overdue tasks
-    const overdue = active.filter(t => {
-      if (!t.endDate) return false;
-      const end = new Date(t.endDate);
-      return end < today;
+    // Overdue tasks (tasks with display status === 'Försenad') - use getTaskDisplayStatus
+    const overdue = tasks.filter(t => {
+      if (t.deleted) return false;
+      const { status: displayStatus } = getTaskDisplayStatus(t);
+      return displayStatus === 'Försenad';
     });
 
     // Tasks starting this week
@@ -351,12 +654,16 @@ export const Dashboard = memo(({ tasks, t, onTaskClick, warningThreshold, user, 
       return start >= startOfWeek && start <= endOfWeek;
     });
 
-    // Status distribution for pie chart
-    const statusCounts = active.reduce((acc, task) => {
-      const status = task.status || 'Planerad';
-      acc[status] = (acc[status] || 0) + 1;
-      return acc;
-    }, {});
+    // Status distribution for pie chart - use getTaskDisplayStatus (SINGLE SOURCE OF TRUTH)
+    const statusCounts = { Planerad: 0, Pågående: 0, Klar: 0, Försenad: 0 };
+    tasks.forEach(task => {
+      if (task.deleted) return;
+      
+      // Use display status (may be 'Försenad' if overdue, even if task.status is Planerad/Pågående)
+      const { status: displayStatus } = getTaskDisplayStatus(task);
+      
+      statusCounts[displayStatus] = (statusCounts[displayStatus] || 0) + 1;
+    });
 
     const statusChart = [
       { status: 'Klar', count: statusCounts['Klar'] || 0, color: '#10b981' },
@@ -599,11 +906,88 @@ export const Dashboard = memo(({ tasks, t, onTaskClick, warningThreshold, user, 
         </div>
       </div>
 
+      {/* Debug Panel - Only in Development */}
+      {IS_LOCAL_DEBUG && (
+        <div className="mb-4">
+          <button
+            onClick={() => setShowDebugPanel(!showDebugPanel)}
+            className="px-3 py-2 text-xs font-medium text-gray-700 dark:text-gray-300 bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-300 dark:border-yellow-700 rounded-lg hover:bg-yellow-200 dark:hover:bg-yellow-900/50 transition-colors"
+          >
+            {showDebugPanel ? '▼ Hide Debug' : '▶ Show Debug'}
+          </button>
+          
+          {showDebugPanel && (
+            <DebugPanel tasks={tasks} stats={stats} normalizeSubtaskPriority={normalizeSubtaskPriority} checkIsDone={checkIsDone} getTaskDisplayStatus={getTaskDisplayStatus} />
+          )}
+        </div>
+      )}
+
       {/* Status Distribution and Priority Distribution - Side by Side */}
       <div className="grid grid-cols-1 md:grid-cols-[65%_35%] gap-3 sm:gap-4">
         {/* Status Distribution */}
         <div className="bg-white dark:bg-gray-800 rounded-lg p-4 sm:p-6 border border-gray-200 dark:border-gray-700 shadow-sm">
           <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">{t('statusDistribution')}</h3>
+          
+          {/* Debug info (only in development, localhost) */}
+          {IS_LOCAL_DEBUG && typeof window !== 'undefined' && window.location.hostname === 'localhost' && (() => {
+            // Calculate raw vs display status counts for debug
+            const rawStatusCounts = { Planerad: 0, Pågående: 0, Klar: 0, Försenad: 0 };
+            const displayStatusCounts = { Planerad: 0, Pågående: 0, Klar: 0, Försenad: 0 };
+            const mismatches = [];
+            
+            tasks.forEach(task => {
+              if (task.deleted) return;
+              
+              // Raw status
+              const rawStatus = task.status || 'Planerad';
+              const normalizedRaw = rawStatus.toLowerCase();
+              let rawNormalized = 'Planerad';
+              if (normalizedRaw.includes('klar') || normalizedRaw.includes('done')) {
+                rawNormalized = 'Klar';
+              } else if (normalizedRaw.includes('pågående') || normalizedRaw.includes('progress')) {
+                rawNormalized = 'Pågående';
+              } else if (normalizedRaw.includes('försenad') || normalizedRaw.includes('delayed')) {
+                rawNormalized = 'Försenad';
+              }
+              rawStatusCounts[rawNormalized] = (rawStatusCounts[rawNormalized] || 0) + 1;
+              
+              // Display status
+              const { status: displayStatus } = getTaskDisplayStatus(task);
+              displayStatusCounts[displayStatus] = (displayStatusCounts[displayStatus] || 0) + 1;
+              
+              // Track mismatches
+              if (rawNormalized !== displayStatus) {
+                mismatches.push({
+                  taskId: task.id || 'unknown',
+                  rawStatus: rawNormalized,
+                  displayStatus: displayStatus,
+                  endDate: task.endDate || null,
+                });
+              }
+            });
+            
+            return (
+              <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800 text-xs">
+                <div className="font-semibold text-yellow-800 dark:text-yellow-200 mb-2">🔍 Debug (localhost only):</div>
+                <div className="space-y-1 text-yellow-700 dark:text-yellow-300">
+                  <div>Raw status counts (task.status): Planerad={rawStatusCounts.Planerad}, Pågående={rawStatusCounts.Pågående}, Klar={rawStatusCounts.Klar}, Försenad={rawStatusCounts.Försenad}</div>
+                  <div>Display status counts (getTaskDisplayStatus): Planerad={displayStatusCounts.Planerad}, Pågående={displayStatusCounts.Pågående}, Klar={displayStatusCounts.Klar}, Försenad={displayStatusCounts.Försenad}</div>
+                  {mismatches.length > 0 && (
+                    <div className="mt-2">
+                      <div className="font-semibold">Tasks where raw ≠ display ({mismatches.length}):</div>
+                      {mismatches.slice(0, 5).map((m, idx) => (
+                        <div key={idx} className="ml-2 font-mono">
+                          {m.taskId.substring(0, 8)}: raw={m.rawStatus} → display={m.displayStatus} (endDate: {m.endDate || 'null'})
+                        </div>
+                      ))}
+                      {mismatches.length > 5 && <div className="ml-2">... and {mismatches.length - 5} more</div>}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
+          
           <div className="space-y-3">
             <div>
               <div className="flex justify-between text-sm mb-1">

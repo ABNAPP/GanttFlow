@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { memo } from 'react';
 import { X, Trash2, Plus, Check, XCircle, RefreshCw, Edit2 } from 'lucide-react';
 import { ChecklistItem } from '../common/ChecklistItem';
-import { generateId, formatDate, calculateChecklistProgress, validateTaskForm } from '../../utils/helpers';
+import { generateId, formatDate, calculateChecklistProgress, validateTaskForm, getTaskDisplayStatus } from '../../utils/helpers';
 import { showError, showSuccess } from '../../utils/toast';
 
 export const TaskModal = memo(({
@@ -50,6 +50,21 @@ export const TaskModal = memo(({
   useEffect(() => {
     if (task) {
       console.log('[TaskModal] Loading task with comments:', task.comments);
+      
+      // Get display status (may be 'Försenad' if overdue, but we store original task.status)
+      const { status: displayStatus, reason } = getTaskDisplayStatus(task);
+      
+      // Debug logging (only in development, localhost)
+      if (import.meta.env.DEV && typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+        console.log('[TaskModal Debug] Task loaded:', {
+          'task.status (raw)': task.status,
+          'getTaskDisplayStatus(task).status (display)': displayStatus,
+          'getTaskDisplayStatus(task).reason': reason,
+          'task.startDate': task.startDate,
+          'task.endDate': task.endDate,
+        });
+      }
+      
       setFormData({
         client: task.client || '',
         title: task.title || '',
@@ -63,10 +78,14 @@ export const TaskModal = memo(({
         other: task.other || '',
         startDate: task.startDate || formatDate(new Date()),
         endDate: task.endDate || formatDate(new Date()),
-        status: task.status || 'Planerad',
+        // Use display status for UI dropdown (shows 'Försenad' if overdue)
+        status: displayStatus, // Show display status in dropdown
         checklist: task.checklist || [],
         tags: task.tags || [],
         comments: task.comments || [],
+        // Store original status separately so we can restore it if user doesn't change status
+        _originalStatus: task.status || 'Planerad', // Internal: original task.status
+        _displayStatusReason: reason, // Internal: why display status differs (if dateOverdue)
       });
     } else {
       const today = new Date();
@@ -210,9 +229,39 @@ export const TaskModal = memo(({
     }
 
     setValidationErrors([]);
-    console.log('[TaskModal] Submitting formData with comments:', formData.comments);
+    
+    // Prepare data for saving - handle 'Försenad' status (OPTION B: never save 'Försenad')
+    const dataToSave = { ...formData };
+    
+    // If status is 'Försenad' (display status), restore original task.status
+    // User can only save Planerad/Pågående/Klar, never 'Försenad'
+    if (dataToSave.status === 'Försenad') {
+      // Restore original status if user didn't manually change it
+      if (dataToSave._originalStatus) {
+        dataToSave.status = dataToSave._originalStatus;
+      } else {
+        // Fallback: if no original status, default to 'Planerad'
+        dataToSave.status = 'Planerad';
+      }
+    }
+    
+    // Remove internal fields before saving
+    delete dataToSave._originalStatus;
+    delete dataToSave._displayStatusReason;
+    
+    // Debug logging (only in development, localhost)
+    if (import.meta.env.DEV && typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+      console.log('[TaskModal Debug] Submitting:', {
+        'formData.status (display)': formData.status,
+        'dataToSave.status (saved)': dataToSave.status,
+        'task.status (original)': task?.status,
+        'displayStatusReason': formData._displayStatusReason,
+      });
+    }
+    
+    console.log('[TaskModal] Submitting formData with comments:', dataToSave.comments);
     try {
-      await onSave(formData);
+      await onSave(dataToSave);
       // Only show success if onSave didn't throw an error
       // Success message is already shown by onSave
       // Modal will be closed by onSave if successful
@@ -312,15 +361,35 @@ export const TaskModal = memo(({
               </label>
               <select
                 value={formData.status}
-                onChange={(e) => setFormData((prev) => ({ ...prev, status: e.target.value }))}
+                onChange={(e) => {
+                  // When user changes status manually, mark that they've changed it
+                  setFormData((prev) => ({ 
+                    ...prev, 
+                    status: e.target.value,
+                    // If user manually changes status to something other than 'Försenad', 
+                    // clear _originalStatus so the new value is saved
+                    _originalStatus: e.target.value === 'Försenad' ? prev._originalStatus : undefined,
+                    _displayStatusReason: e.target.value === 'Försenad' ? 'dateOverdue' : undefined
+                  }));
+                }}
                 className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg px-3 py-2 text-sm outline-none"
                 aria-label={t('labelStatus')}
               >
+                {/* Always show standard statuses */}
                 <option value="Planerad">{t('statusPlan')}</option>
                 <option value="Pågående">{t('statusProg')}</option>
                 <option value="Klar">{t('statusDone')}</option>
-                <option value="Försenad">{t('statusLate')}</option>
+                {/* Show 'Försenad' as display-only option when task is overdue */}
+                {formData.status === 'Försenad' && (
+                  <option value="Försenad">{t('statusLate')}</option>
+                )}
               </select>
+              {/* Show info text if status is 'Försenad' due to date */}
+              {formData.status === 'Försenad' && formData._displayStatusReason === 'dateOverdue' && (
+                <div className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+                  Status visas som Försenad eftersom slutdatum har passerat.
+                </div>
+              )}
             </div>
           </div>
 
