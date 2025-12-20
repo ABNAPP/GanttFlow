@@ -12,6 +12,7 @@ export const exportToCSV = (tasks, t) => {
   }
 
   // CSV Headers
+  // NOTE: Priority exists ONLY on subtasks (checklist items), NOT on main tasks
   const headers = [
     t('labelClient') || 'Client',
     t('labelTitle') || 'Title',
@@ -26,7 +27,6 @@ export const exportToCSV = (tasks, t) => {
     t('statPl') || 'PL',
     t('labelStart') || 'Start Date',
     t('labelEnd') || 'End Date',
-    t('labelPriority') || 'Priority',
     t('labelTags') || 'Tags',
   ];
 
@@ -46,7 +46,7 @@ export const exportToCSV = (tasks, t) => {
       task.pl || '',
       task.startDate ? new Date(task.startDate).toLocaleDateString() : '',
       task.endDate ? new Date(task.endDate).toLocaleDateString() : '',
-      task.priority || 'normal',
+      // NOTE: Priority exists ONLY on subtasks, not exported here
       (task.tags || []).join('; '),
     ];
   });

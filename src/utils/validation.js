@@ -21,7 +21,22 @@ export const validateChecklistItem = (item, index = 0) => {
       startDate: null,
       endDate: null,
       executor: null,
+      priority: 'normal', // Default priority
     };
+  }
+
+  // Handle priority: support both 'priority' and 'prioritet' (backward compatibility)
+  // Normalize to standard format: 'low', 'normal', 'high'
+  let priority = item.priority || item.prioritet || 'normal';
+  if (typeof priority === 'string') {
+    priority = priority.trim().toLowerCase();
+    // Map Swedish to English for consistency
+    if (priority === 'hög' || priority === 'hog') priority = 'high';
+    else if (priority === 'låg' || priority === 'lag') priority = 'low';
+    else if (priority === 'normal') priority = 'normal';
+    else if (priority !== 'high' && priority !== 'low') priority = 'normal'; // Default unknown to normal
+  } else {
+    priority = 'normal';
   }
 
   return {
@@ -31,6 +46,7 @@ export const validateChecklistItem = (item, index = 0) => {
     startDate: item.startDate && typeof item.startDate === 'string' ? item.startDate : null,
     endDate: item.endDate && typeof item.endDate === 'string' ? item.endDate : null,
     executor: item.executor && typeof item.executor === 'string' ? item.executor.trim() : null,
+    priority: priority, // Always include priority field
   };
 };
 
@@ -60,9 +76,8 @@ export const validateTask = (data, id) => {
     ? data.checklist.map((item, idx) => validateChecklistItem(item, idx))
     : [];
 
-  // Validate priority
-  const validPriorities = ['low', 'normal', 'high'];
-  const priority = validPriorities.includes(data.priority) ? data.priority : 'normal';
+  // NOTE: Priority exists ONLY on subtasks (checklist items), NOT on main tasks
+  // If old data contains task.priority, ignore it completely
 
   // Validate tags
   const tags = Array.isArray(data.tags) 
@@ -89,7 +104,7 @@ export const validateTask = (data, id) => {
     status,
     checklist,
     tags,
-    priority,
+    // Priority exists ONLY on subtasks, not on main tasks
     deleted: Boolean(data.deleted),
     deletedAt: data.deletedAt && typeof data.deletedAt === 'string' ? data.deletedAt : null,
     createdAt: data.createdAt && typeof data.createdAt === 'string' ? data.createdAt : null,

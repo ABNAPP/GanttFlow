@@ -4,6 +4,113 @@ import { checkIsDone, calculateChecklistProgress, hasOverdueChecklistItems, getT
 import { WorkloadTasksModal } from '../modals/WorkloadTasksModal';
 import { QuickListSection } from './QuickListSection';
 
+/**
+ * Normalize subtask priority to standard format: 'Hög', 'Normal', or 'Låg'
+ * Single source of truth for subtask priority normalization
+ * IMPORTANT: Priority exists ONLY on subtasks (checklist items), NOT on main tasks
+ * @param {Object} subtask - Checklist item/subtask object
+ * @returns {string} Normalized priority: 'Hög', 'Normal', or 'Låg' (default)
+ */
+const normalizeSubtaskPriority = (subtask) => {
+  if (!subtask || typeof subtask !== 'object') return 'Normal';
+  
+  // Read from subtask.priority (primary) or subtask.prioritet (backward compatibility)
+  const rawPriority = subtask.priority || subtask.prioritet;
+  if (!rawPriority) return 'Normal';
+  
+  const normalized = String(rawPriority).trim().toLowerCase();
+  
+  // Map to Swedish standard: Hög, Normal, Låg
+  if (normalized === 'high' || normalized === 'hög' || normalized === 'hog') {
+    return 'Hög';
+  }
+  if (normalized === 'low' || normalized === 'låg' || normalized === 'lag') {
+    return 'Låg';
+  }
+  // Default to Normal for 'normal' or any unknown value
+  return 'Normal';
+};
+
+/**
+ * Get active subtasks (checklist items) grouped by executor
+ * This is the single source of truth for workload calculations
+ * IMPORTANT: This function is used by both the summary count and the detail dialog
+ * to ensure they always show the same data. Any changes here affect both views.
+ * @param {Array} tasks - All tasks
+ * @returns {Array} Array of { task, item, executor, priority } for active subtasks
+ */
+const getActiveSubtasksByExecutor = (tasks) => {
+  if (!Array.isArray(tasks)) return [];
+  
+  const subtasks = [];
+  let rawCount = 0;
+  let activeFilteredCount = 0;
+  
+  tasks.forEach((task) => {
+    // Only process active (non-deleted, non-done) tasks
+    if (task.deleted) return;
+    if (checkIsDone(task.status)) return;
+    
+    // Process checklist items
+    (task.checklist || []).forEach((item) => {
+      rawCount++;
+      
+      // Only count active (non-done) subtasks
+      if (item.done) return;
+      
+      const executor = item.executor && item.executor.trim() !== '' ? item.executor.trim() : null;
+      if (executor) {
+        activeFilteredCount++;
+        
+        // Use normalizeSubtaskPriority helper - single source of truth for subtask priority
+        // IMPORTANT: Priority exists ONLY on subtasks, never on main tasks
+        const normalizedPriority = normalizeSubtaskPriority(item);
+        
+        // Diagnostic logging (temporary - remove after verification)
+        if (process.env.NODE_ENV === 'development' && executor.toLowerCase() === 'ali' && activeFilteredCount <= 3) {
+          console.log('[Workload Debug] Subtask raw data:', {
+            itemKeys: Object.keys(item),
+            hasPriority: 'priority' in item,
+            hasPrioritet: 'prioritet' in item,
+            priorityValue: item.priority,
+            prioritetValue: item.prioritet,
+            normalizedPriority,
+            itemText: item.text?.substring(0, 30)
+          });
+        }
+        
+        subtasks.push({
+          task,
+          item,
+          executor,
+          priority: normalizedPriority,
+        });
+      }
+    });
+  });
+  
+  // Diagnostic logging (temporary - remove after verification)
+  if (process.env.NODE_ENV === 'development' && tasks.length > 0) {
+    const aliSubtasks = subtasks.filter(s => s.executor.toLowerCase() === 'ali');
+    if (aliSubtasks.length > 0) {
+      const priorityCounts = { hog: 0, normal: 0, lag: 0 };
+      aliSubtasks.forEach(s => {
+        if (s.priority === 'Hög') priorityCounts.hog++;
+        else if (s.priority === 'Normal') priorityCounts.normal++;
+        else if (s.priority === 'Låg') priorityCounts.lag++;
+      });
+      console.log('[Workload Debug] getActiveSubtasksByExecutor for Ali:', {
+        rawSubtasksCount: rawCount,
+        activeFilteredCount: aliSubtasks.length,
+        countsPerPriority: priorityCounts,
+        sum: priorityCounts.hog + priorityCounts.normal + priorityCounts.lag
+      });
+    }
+  }
+  
+  return subtasks;
+};
+
 export const Dashboard = memo(({ tasks, t, onTaskClick, warningThreshold, user, onOpenQuickList, onConvertToTask }) => {
   const [selectedRole, setSelectedRole] = useState(null);
   const [selectedRoleLabel, setSelectedRoleLabel] = useState(null);
@@ -71,23 +178,43 @@ export const Dashboard = memo(({ tasks, t, onTaskClick, warningThreshold, user, 
     roles.forEach(({ key, label, short }) => {
       const counts = {};
       const nameMap = {}; // Map normalized names to original names (preserve case of first occurrence)
+      // For executor role, track priority breakdown per handler
+      const priorityCounts = key === 'executor' ? {} : null;
       
       tasks.forEach((task) => {
         if (task.deleted) return;
         if (checkIsDone(task.status)) return;
         
         if (key === 'executor') {
-          // For HL, check checklist items
-          (task.checklist || []).forEach((item) => {
-            const val = item.executor && item.executor.trim() !== '' ? item.executor.trim() : null;
-            if (val) {
-              // Normalize name (case-insensitive) for aggregation
-              const normalized = val.toLowerCase();
-              // Preserve original case of first occurrence
-              if (!nameMap[normalized]) {
-                nameMap[normalized] = val;
+          // For HL, use shared helper function to get active subtasks
+          // This ensures summary count matches detail dialog exactly
+          const activeSubtasks = getActiveSubtasksByExecutor([task]);
+          activeSubtasks.forEach(({ executor, priority }) => {
+            // Normalize name (case-insensitive) for aggregation
+            const normalized = executor.toLowerCase();
+            // Preserve original case of first occurrence
+            if (!nameMap[normalized]) {
+              nameMap[normalized] = executor;
+            }
+            counts[normalized] = (counts[normalized] || 0) + 1;
+            
+            // Track priority breakdown for executor role
+            // Priority is already normalized by getActiveSubtasksByExecutor
+            if (priorityCounts) {
+              if (!priorityCounts[normalized]) {
+                priorityCounts[normalized] = { hog: 0, normal: 0, lag: 0 };
               }
-              counts[normalized] = (counts[normalized] || 0) + 1;
+              // Map normalized priority (Hög/Normal/Låg) to keys (hog/normal/lag)
+              if (priority === 'Hög') {
+                priorityCounts[normalized].hog = (priorityCounts[normalized].hog || 0) + 1;
+              } else if (priority === 'Normal') {
+                priorityCounts[normalized].normal = (priorityCounts[normalized].normal || 0) + 1;
+              } else if (priority === 'Låg') {
+                priorityCounts[normalized].lag = (priorityCounts[normalized].lag || 0) + 1;
+              } else {
+                // Fallback: treat unknown as Normal
+                priorityCounts[normalized].normal = (priorityCounts[normalized].normal || 0) + 1;
+              }
             }
           });
         } else {
@@ -105,24 +232,66 @@ export const Dashboard = memo(({ tasks, t, onTaskClick, warningThreshold, user, 
       });
       
       // Convert back to original names and sort alphabetically by name
-      const aggregated = Object.entries(counts).map(([normalized, count]) => [
-        nameMap[normalized] || normalized, // Use original case
-        count
-      ]).sort((a, b) => {
-        // Sort alphabetically by name (case-insensitive)
-        const nameA = a[0].toLowerCase();
-        const nameB = b[0].toLowerCase();
-        if (nameA < nameB) return -1;
-        if (nameA > nameB) return 1;
-        return 0;
-      });
-      
-      result[key] = {
-        label,
-        short,
-        counts: aggregated,
-        total: Object.values(counts).reduce((sum, count) => sum + count, 0),
-      };
+      if (key === 'executor' && priorityCounts) {
+        // For executor, include priority breakdown
+        const aggregated = Object.entries(counts).map(([normalized, count]) => {
+          const priorityData = priorityCounts[normalized] || { hog: 0, normal: 0, lag: 0 };
+          const prioritySum = priorityData.hog + priorityData.normal + priorityData.lag;
+          
+          // Diagnostic logging (temporary - remove after verification)
+          if (process.env.NODE_ENV === 'development' && nameMap[normalized]?.toLowerCase() === 'ali') {
+            console.log(`[Workload Debug] ${nameMap[normalized]}:`, {
+              rawCount: count,
+              prioritySum,
+              byPriority: priorityData,
+              match: count === prioritySum ? '✓' : '✗ MISMATCH'
+            });
+          }
+          
+          // Use count (which should match prioritySum, but ensure consistency)
+          return [
+            nameMap[normalized] || normalized, // Use original case
+            {
+              total: count, // This should equal prioritySum
+              byPriority: priorityData
+            }
+          ];
+        }).sort((a, b) => {
+          // Sort alphabetically by name (case-insensitive)
+          const nameA = a[0].toLowerCase();
+          const nameB = b[0].toLowerCase();
+          if (nameA < nameB) return -1;
+          if (nameA > nameB) return 1;
+          return 0;
+        });
+        
+        result[key] = {
+          label,
+          short,
+          counts: aggregated,
+          total: Object.values(counts).reduce((sum, count) => sum + count, 0),
+        };
+      } else {
+        // For other roles, keep existing format (backward compatible)
+        const aggregated = Object.entries(counts).map(([normalized, count]) => [
+          nameMap[normalized] || normalized, // Use original case
+          count
+        ]).sort((a, b) => {
+          // Sort alphabetically by name (case-insensitive)
+          const nameA = a[0].toLowerCase();
+          const nameB = b[0].toLowerCase();
+          if (nameA < nameB) return -1;
+          if (nameA > nameB) return 1;
+          return 0;
+        });
+        
+        result[key] = {
+          label,
+          short,
+          counts: aggregated,
+          total: Object.values(counts).reduce((sum, count) => sum + count, 0),
+        };
+      }
     });
 
     return result;
@@ -840,23 +1009,68 @@ export const Dashboard = memo(({ tasks, t, onTaskClick, warningThreshold, user, 
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {roleData.counts.map(([name, count]) => (
-                    <button
-                      key={name}
-                      onClick={() => {
-                        setSelectedRole(roleKey);
-                        setSelectedRoleLabel(name);
-                      }}
-                      className="w-full flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-700/30 rounded border border-gray-100 dark:border-gray-700 hover:border-indigo-200 dark:hover:border-indigo-800 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors cursor-pointer"
-                    >
-                      <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
-                        {name}
-                      </span>
-                      <span className="bg-white dark:bg-gray-600 px-2 py-0.5 rounded-full border border-gray-200 dark:border-gray-500 text-xs font-bold text-indigo-600 dark:text-indigo-300">
-                        {count}
-                      </span>
-                    </button>
-                  ))}
+                  {roleData.counts.map(([name, countData]) => {
+                    // For executor role, countData is an object with { total, byPriority }
+                    // For other roles, countData is just a number (backward compatible)
+                    const isExecutor = roleKey === 'executor';
+                    const total = isExecutor && typeof countData === 'object' ? countData.total : countData;
+                    const byPriority = isExecutor && typeof countData === 'object' ? (countData.byPriority || { hog: 0, normal: 0, lag: 0 }) : null;
+                    
+                    // Verify that total matches sum of priorities (safety check)
+                    // Calculate priority sum to ensure consistency
+                    const prioritySum = byPriority 
+                      ? (byPriority.hog || 0) + (byPriority.normal || 0) + (byPriority.lag || 0)
+                      : 0;
+                    // Total should always equal prioritySum for executor role
+                    // Use prioritySum as source of truth since it's calculated from the same dataset
+                    const displayTotal = isExecutor && byPriority ? prioritySum : total;
+                    
+                    return (
+                      <button
+                        key={name}
+                        onClick={() => {
+                          setSelectedRole(roleKey);
+                          setSelectedRoleLabel(name);
+                        }}
+                        className="w-full flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-700/30 rounded border border-gray-100 dark:border-gray-700 hover:border-indigo-200 dark:hover:border-indigo-800 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors cursor-pointer"
+                      >
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-200 flex-1 truncate">
+                          {name}
+                        </span>
+                        <div className="flex items-center gap-1 flex-shrink-0 flex-wrap justify-end">
+                          {/* Priority badges for executor role only - always show all three */}
+                          {isExecutor && byPriority && (
+                            <div className="flex items-center gap-0.5 flex-wrap">
+                              <span className={`px-1 py-0.5 rounded text-[9px] font-semibold border whitespace-nowrap ${
+                                byPriority.hog > 0
+                                  ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800'
+                                  : 'bg-gray-50 dark:bg-gray-700/50 text-gray-400 dark:text-gray-500 border-gray-200 dark:border-gray-600'
+                              }`}>
+                                {t('priorityHigh')}: {byPriority.hog || 0}
+                              </span>
+                              <span className={`px-1 py-0.5 rounded text-[9px] font-semibold border whitespace-nowrap ${
+                                byPriority.normal > 0
+                                  ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800'
+                                  : 'bg-gray-50 dark:bg-gray-700/50 text-gray-400 dark:text-gray-500 border-gray-200 dark:border-gray-600'
+                              }`}>
+                                {t('priorityNormal')}: {byPriority.normal || 0}
+                              </span>
+                              <span className={`px-1 py-0.5 rounded text-[9px] font-semibold border whitespace-nowrap ${
+                                byPriority.lag > 0
+                                  ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800'
+                                  : 'bg-gray-50 dark:bg-gray-700/50 text-gray-400 dark:text-gray-500 border-gray-200 dark:border-gray-600'
+                              }`}>
+                                {t('priorityLow')}: {byPriority.lag || 0}
+                              </span>
+                            </div>
+                          )}
+                          <span className="bg-white dark:bg-gray-600 px-2 py-0.5 rounded-full border border-gray-200 dark:border-gray-500 text-xs font-bold text-indigo-600 dark:text-indigo-300 whitespace-nowrap">
+                            {isExecutor && byPriority ? displayTotal : total}
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -907,6 +1121,7 @@ export const Dashboard = memo(({ tasks, t, onTaskClick, warningThreshold, user, 
           warningThreshold={warningThreshold}
           onTaskClick={onTaskClick}
           t={t}
+          getActiveSubtasksByExecutor={getActiveSubtasksByExecutor}
         />
       )}
     </div>

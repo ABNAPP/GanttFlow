@@ -111,7 +111,7 @@ export const TaskModal = memo(({
       startDate: newChecklistStartDate || null,
       endDate: newChecklistEndDate || null,
       executor: newChecklistExecutor || null,
-      priority: newChecklistPriority || 'normal',
+      priority: newChecklistPriority || 'normal', // Always include priority field
     };
     setFormData((prev) => ({
       ...prev,
@@ -157,7 +157,7 @@ export const TaskModal = memo(({
           startDate: tempChecklistData.startDate || null,
           endDate: tempChecklistData.endDate || null,
           executor: tempChecklistData.executor || null,
-          priority: tempChecklistData.priority || 'normal',
+          priority: tempChecklistData.priority || item.priority || 'normal', // Preserve existing priority if not changed, default to 'normal'
         };
       }
       return item;

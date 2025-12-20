@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { ChevronRight, ChevronDown, AlertTriangle, Briefcase, CheckSquare, Tag, Circle } from 'lucide-react';
+import { ChevronRight, ChevronDown, AlertTriangle, Briefcase, CheckSquare, Tag } from 'lucide-react';
 import { RoleBadge } from './RoleBadge';
 import { getTimeStatus, calculateChecklistProgress } from '../../utils/helpers';
 
@@ -43,19 +43,7 @@ export const TaskItem = memo(({
             </div>
           )}
           <div className="flex items-center gap-1.5 flex-wrap">
-            {task.priority && task.priority !== 'normal' && (
-              <div
-                className={`flex items-center gap-0.5 text-[9px] ${
-                  task.priority === 'high'
-                    ? 'text-red-600 dark:text-red-400'
-                    : 'text-gray-500 dark:text-gray-400'
-                }`}
-                title={task.priority === 'high' ? 'Hög prioritet' : 'Låg prioritet'}
-              >
-                <Circle size={8} fill="currentColor" />
-                <span className="uppercase">{task.priority}</span>
-              </div>
-            )}
+            {/* NOTE: Priority exists ONLY on subtasks (checklist items), NOT on main tasks */}
             {task.tags && task.tags.length > 0 && (
               <div className="flex items-center gap-1 flex-wrap">
                 {task.tags.slice(0, 2).map((tag, idx) => (

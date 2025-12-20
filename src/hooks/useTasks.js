@@ -282,11 +282,14 @@ export const useTasks = (user) => {
           }
         }
         
+        // Remove priority from task data - priority exists ONLY on subtasks (checklist items)
+        const { priority, ...taskDataWithoutPriority } = taskData;
+        
         const newTask = {
           id: 'demo-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9),
-          ...taskData,
+          ...taskDataWithoutPriority,
           tags: taskData.tags || [],
-          priority: taskData.priority || 'normal',
+          // NOTE: Priority exists ONLY on subtasks, never on main tasks
           createdAt: new Date().toISOString(),
         };
         
@@ -325,11 +328,23 @@ export const useTasks = (user) => {
 
     // Real Firebase mode
     try {
-      console.log('Adding task to Firebase:', { userId: user.uid, taskData });
-      const docRef = await addDoc(getTasksCollection(user.uid), {
-        ...taskData,
+    // Remove priority from task data - priority exists ONLY on subtasks (checklist items)
+    const { priority, ...taskDataWithoutPriority } = taskData;
+    
+    // Ensure all checklist items have priority field (migration/consistency)
+    const normalizedTaskData = {
+        ...taskDataWithoutPriority,
+        checklist: taskData.checklist && Array.isArray(taskData.checklist)
+          ? taskData.checklist.map(item => ({
+              ...item,
+              priority: item.priority || 'normal', // Ensure priority is always present on subtasks
+            }))
+          : taskData.checklist,
         createdAt: new Date().toISOString(),
-      });
+      };
+      
+      console.log('Adding task to Firebase:', { userId: user.uid, taskData: normalizedTaskData });
+      const docRef = await addDoc(getTasksCollection(user.uid), normalizedTaskData);
       console.log('Task added successfully with ID:', docRef.id);
       // Note: onSnapshot will automatically update the tasks list
       showSuccess('Ny uppgift created');
@@ -347,6 +362,19 @@ export const useTasks = (user) => {
     if (!user) {
       showError('You must be logged in to update tasks');
       throw new Error('No user');
+    }
+
+    // Remove priority from task data - priority exists ONLY on subtasks (checklist items)
+    if (taskData.priority !== undefined) {
+      delete taskData.priority;
+    }
+    
+    // Ensure all checklist items have priority field (migration/consistency)
+    if (taskData.checklist && Array.isArray(taskData.checklist)) {
+      taskData.checklist = taskData.checklist.map(item => ({
+        ...item,
+        priority: item.priority || 'normal', // Ensure priority is always present on subtasks
+      }));
     }
 
     // For demo mode, use localStorage (only on localhost)
