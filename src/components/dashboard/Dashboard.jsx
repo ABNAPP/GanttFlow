@@ -36,6 +36,12 @@ const normalizeSubtaskPriority = (subtask) => {
  * This is the single source of truth for workload calculations
  * IMPORTANT: This function is used by both the summary count and the detail dialog
  * to ensure they always show the same data. Any changes here affect both views.
+ * 
+ * FILTERING RULES (Belastning):
+ * - Only filters: task.deleted === false, item.done === false, item.executor exists
+ * - Does NOT filter by task.status (Planerad/Pågående/Klar) - Belastning counts ALL active subtasks
+ *   regardless of main task status. This ensures Belastning badges don't change when task status changes.
+ * 
  * @param {Array} tasks - All tasks
  * @returns {Array} Array of { task, item, executor, priority } for active subtasks
  */
@@ -47,9 +53,10 @@ const getActiveSubtasksByExecutor = (tasks) => {
   let activeFilteredCount = 0;
   
   tasks.forEach((task) => {
-    // Only process active (non-deleted, non-done) tasks
+    // Only filter by deleted - NOT by task status (Belastning counts subtasks regardless of task status)
     if (task.deleted) return;
-    if (checkIsDone(task.status)) return;
+    // NOTE: We intentionally do NOT filter by checkIsDone(task.status) here
+    // Belastning should show all active subtasks regardless of whether task is Planerad/Pågående/Klar
     
     // Process checklist items
     (task.checklist || []).forEach((item) => {
@@ -75,7 +82,8 @@ const getActiveSubtasksByExecutor = (tasks) => {
             priorityValue: item.priority,
             prioritetValue: item.prioritet,
             normalizedPriority,
-            itemText: item.text?.substring(0, 30)
+            itemText: item.text?.substring(0, 30),
+            taskStatus: task.status // Log task status to verify it's not filtered
           });
         }
         
@@ -183,11 +191,12 @@ export const Dashboard = memo(({ tasks, t, onTaskClick, warningThreshold, user, 
       
       tasks.forEach((task) => {
         if (task.deleted) return;
-        if (checkIsDone(task.status)) return;
         
         if (key === 'executor') {
           // For HL, use shared helper function to get active subtasks
           // This ensures summary count matches detail dialog exactly
+          // NOTE: We do NOT filter by task.status here - Belastning counts ALL active subtasks
+          // regardless of whether task is Planerad/Pågående/Klar
           const activeSubtasks = getActiveSubtasksByExecutor([task]);
           activeSubtasks.forEach(({ executor, priority }) => {
             // Normalize name (case-insensitive) for aggregation
@@ -218,6 +227,9 @@ export const Dashboard = memo(({ tasks, t, onTaskClick, warningThreshold, user, 
             }
           });
         } else {
+          // For other roles (UA, CAD, etc.), filter by task status (backward compatible)
+          if (checkIsDone(task.status)) return;
+          
           const val = task[key] && task[key].trim() !== '' ? task[key].trim() : null;
           if (val) {
             // Normalize name (case-insensitive) for aggregation
