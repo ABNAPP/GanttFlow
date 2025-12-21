@@ -237,7 +237,7 @@ export const QuickList = memo(({ user, t }) => {
                         }`}
                         title={item.type === 'job' ? t('typeJob') : t('typePrivate')}
                       >
-                        {item.type === 'job' ? '🟦' : '🟪'} {item.type === 'job' ? t('typeJob') : t('typePrivate')}
+                        {item.type === 'job' ? t('typeJob') : t('typePrivate')}
                       </span>
                     )}
                     <span className="flex-1 text-sm text-gray-700 dark:text-gray-200">
