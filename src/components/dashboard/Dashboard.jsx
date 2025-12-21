@@ -1,35 +1,10 @@
 import { memo, useMemo, useState, useEffect } from 'react';
 import { BarChart3, CheckCircle, Clock, AlertTriangle, Calendar, Filter, Users, Layers, Tag, TrendingUp, ChevronDown, ChevronRight } from 'lucide-react';
-import { checkIsDone, calculateChecklistProgress, hasOverdueChecklistItems, getTimeStatus, getTaskDisplayStatus } from '../../utils/helpers';
+import { checkIsDone, calculateChecklistProgress, hasOverdueChecklistItems, getTimeStatus, getTaskDisplayStatus, normalizeSubtaskPriority, isActiveSubtask } from '../../utils/helpers';
 import { WorkloadTasksModal } from '../modals/WorkloadTasksModal';
 import { QuickListSection } from './QuickListSection';
 
-/**
- * Normalize subtask priority to standard format: 'Hög', 'Normal', or 'Låg'
- * Single source of truth for subtask priority normalization
- * IMPORTANT: Priority exists ONLY on subtasks (checklist items), NOT on main tasks
- * @param {Object} subtask - Checklist item/subtask object
- * @returns {string} Normalized priority: 'Hög', 'Normal', or 'Låg' (default)
- */
-const normalizeSubtaskPriority = (subtask) => {
-  if (!subtask || typeof subtask !== 'object') return 'Normal';
-  
-  // Read from subtask.priority (primary) or subtask.prioritet (backward compatibility)
-  const rawPriority = subtask.priority || subtask.prioritet;
-  if (!rawPriority) return 'Normal';
-  
-  const normalized = String(rawPriority).trim().toLowerCase();
-  
-  // Map to Swedish standard: Hög, Normal, Låg
-  if (normalized === 'high' || normalized === 'hög' || normalized === 'hog') {
-    return 'Hög';
-  }
-  if (normalized === 'low' || normalized === 'låg' || normalized === 'lag') {
-    return 'Låg';
-  }
-  // Default to Normal for 'normal' or any unknown value
-  return 'Normal';
-};
+// normalizeSubtaskPriority and isActiveSubtask are now imported from utils/helpers
 
 /**
  * Get active subtasks (checklist items) grouped by executor
@@ -62,8 +37,8 @@ const getActiveSubtasksByExecutor = (tasks) => {
     (task.checklist || []).forEach((item) => {
       rawCount++;
       
-      // Only count active (non-done) subtasks
-      if (item.done) return;
+      // Only count active subtasks (use centralized function)
+      if (!isActiveSubtask(item)) return;
       
       const executor = item.executor && item.executor.trim() !== '' ? item.executor.trim() : null;
       if (executor) {
@@ -175,7 +150,7 @@ const DebugPanel = ({ tasks, stats, normalizeSubtaskPriority, checkIsDone, getTa
     // Count priorities from checklist items (EXACT same logic as Priority Distribution)
     if (task.checklist && task.checklist.length > 0) {
       task.checklist.forEach((item) => {
-        if (item.done) return; // Skip completed items
+        if (!isActiveSubtask(item)) return; // Skip inactive items (matches UI behavior)
         
         // Track first subtask for sample
         if (!firstSubtaskId) {
@@ -186,10 +161,10 @@ const DebugPanel = ({ tasks, stats, normalizeSubtaskPriority, checkIsDone, getTa
           firstSubtaskAssignee = item.executor || null;
         }
         
-        // Use exact same logic as Priority Distribution: item.priority || 'normal'
-        const priority = item.priority || 'normal';
-        if (priorityCounts.hasOwnProperty(priority)) {
-          priorityCounts[priority]++;
+        // Use normalizeSubtaskPriority (single source of truth)
+        const normalizedPriority = normalizeSubtaskPriority(item);
+        if (priorityCounts.hasOwnProperty(normalizedPriority.toLowerCase())) {
+          priorityCounts[normalizedPriority.toLowerCase()]++;
         } else {
           // Count missing/invalid priorities
           if (!item.priority && !item.prioritet) {
@@ -201,10 +176,11 @@ const DebugPanel = ({ tasks, stats, normalizeSubtaskPriority, checkIsDone, getTa
   });
   
   // Map priority counts to Swedish format for display (matching UI labels)
+  // normalizeSubtaskPriority returns Swedish format, so we need to map from Swedish to English for counts
   const priorityCountsSwedish = {
-    Hög: priorityCounts.high || 0,
+    Hög: priorityCounts.hög || 0,
     Normal: priorityCounts.normal || 0,
-    Låg: priorityCounts.low || 0,
+    Låg: priorityCounts.låg || 0,
   };
 
   // Determine filter information
@@ -520,8 +496,9 @@ export const Dashboard = memo(({ tasks, t, onTaskClick, warningThreshold, user, 
       statusCounts[displayStatus] = (statusCounts[displayStatus] || 0) + 1;
     });
     
-    // Calculate priority counts from subtasks (EXACT same logic as Priority Distribution useMemo)
-    const priorityCounts = { high: 0, normal: 0, low: 0 };
+    // Calculate priority counts from subtasks (EXACT same logic as Priority Distribution)
+    // Use centralized functions: isActiveSubtask + normalizeSubtaskPriority
+    const priorityCounts = { hög: 0, normal: 0, låg: 0 };
     let firstSubtaskId = null;
     let firstSubtaskPriority = null;
     let firstSubtaskRawPriority = null;
@@ -547,7 +524,7 @@ export const Dashboard = memo(({ tasks, t, onTaskClick, warningThreshold, user, 
       // Count priorities from checklist items (EXACT same logic as Priority Distribution)
       if (task.checklist && task.checklist.length > 0) {
         task.checklist.forEach((item) => {
-          if (item.done) return; // Skip completed items
+          if (!isActiveSubtask(item)) return; // Skip inactive items (matches UI behavior)
           
           // Track first subtask for sample
           if (!firstSubtaskId) {
@@ -556,20 +533,22 @@ export const Dashboard = memo(({ tasks, t, onTaskClick, warningThreshold, user, 
             firstSubtaskPriority = normalizeSubtaskPriority(item);
           }
           
-          // Use exact same logic as Priority Distribution: item.priority || 'normal'
-          const priority = item.priority || 'normal';
-          if (priorityCounts.hasOwnProperty(priority)) {
-            priorityCounts[priority]++;
+          // Use normalizeSubtaskPriority (single source of truth)
+          const normalizedPriority = normalizeSubtaskPriority(item);
+          const priorityKey = normalizedPriority.toLowerCase();
+          if (priorityCounts.hasOwnProperty(priorityKey)) {
+            priorityCounts[priorityKey]++;
           }
         });
       }
     });
     
     // Map priority counts to Swedish format for display (matching UI labels)
+    // normalizeSubtaskPriority returns Swedish format, so we need to map from Swedish to English for counts
     const priorityCountsSwedish = {
-      Hög: priorityCounts.high || 0,
+      Hög: priorityCounts.hög || 0,
       Normal: priorityCounts.normal || 0,
-      Låg: priorityCounts.low || 0,
+      Låg: priorityCounts.låg || 0,
     };
     
     // Log debug information
@@ -1044,181 +1023,103 @@ export const Dashboard = memo(({ tasks, t, onTaskClick, warningThreshold, user, 
         </div>
 
         {/* Priority Distribution */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-4 sm:p-6 border border-gray-200 dark:border-gray-700 shadow-sm">
-        <div className="flex items-center gap-2 mb-4">
-          <TrendingUp className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-          <h3 className="text-lg font-semibold text-gray-800 dark:text-white">{t('priorityDistribution')}</h3>
-        </div>
-        <div className="space-y-3">
-          {useMemo(() => {
-            const priorityCounts = { high: 0, normal: 0, low: 0 };
-            tasks.forEach((task) => {
-              if (task.deleted || checkIsDone(task.status)) return;
-              // Count priorities from checklist items instead of main task
-              if (task.checklist && task.checklist.length > 0) {
-                task.checklist.forEach((item) => {
-                  if (item.done) return; // Skip completed items
-                  const priority = item.priority || 'normal';
-                  if (priorityCounts.hasOwnProperty(priority)) {
-                    priorityCounts[priority]++;
-                  }
-                });
+        {(() => {
+          // IMPORTANT:
+          // Do NOT call useMemo inside this IIFE (React Hooks rule).
+          // Compute counts without hooks here to keep build stable.
+          const priorityCounts = { Hög: 0, Normal: 0, Låg: 0 };
+
+          tasks.forEach((task) => {
+            if (task?.deleted || checkIsDone(task?.status)) return;
+
+            const checklist = Array.isArray(task?.checklist) ? task.checklist : [];
+            checklist.forEach((item) => {
+              if (!isActiveSubtask(item)) return;
+
+              const normalizedPriority = normalizeSubtaskPriority(item);
+              if (Object.prototype.hasOwnProperty.call(priorityCounts, normalizedPriority)) {
+                priorityCounts[normalizedPriority]++;
               }
             });
-            const total = priorityCounts.high + priorityCounts.normal + priorityCounts.low;
-            return { counts: priorityCounts, total };
-          }, [tasks]).counts && (
-            <>
-              <div>
-                <div className="flex justify-between text-sm mb-1">
-                  <span className="text-gray-600 dark:text-gray-300 flex items-center gap-1">
-                    <span className="w-2 h-2 bg-red-500 rounded-full" />
-                    {t('priorityHigh')}
-                  </span>
-                  <span className="font-semibold text-gray-800 dark:text-white">
-                    {useMemo(() => {
-                      const counts = { high: 0, normal: 0, low: 0 };
-                      tasks.forEach((task) => {
-                        if (task.deleted || checkIsDone(task.status)) return;
-                        if (task.checklist && task.checklist.length > 0) {
-                          task.checklist.forEach((item) => {
-                            if (item.done) return;
-                            const priority = item.priority || 'normal';
-                            if (counts.hasOwnProperty(priority)) counts[priority]++;
-                          });
-                        }
-                      });
-                      return counts.high;
-                    }, [tasks])}
-                  </span>
-                </div>
-                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                  <div
-                    className="bg-red-500 h-2 rounded-full"
-                    style={{
-                      width: `${
-                        useMemo(() => {
-                          const counts = { high: 0, normal: 0, low: 0 };
-                          let total = 0;
-                          tasks.forEach((task) => {
-                            if (task.deleted || checkIsDone(task.status)) return;
-                            if (task.checklist && task.checklist.length > 0) {
-                              task.checklist.forEach((item) => {
-                                if (item.done) return;
-                                total++;
-                                const priority = item.priority || 'normal';
-                                if (counts.hasOwnProperty(priority)) counts[priority]++;
-                              });
-                            }
-                          });
-                          return total > 0 ? (counts.high / total) * 100 : 0;
-                        }, [tasks])}%`,
-                    }}
-                  />
-                </div>
+          });
+
+          const total = priorityCounts.Hög + priorityCounts.Normal + priorityCounts.Låg;
+
+          return (
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-4 sm:p-6 border border-gray-200 dark:border-gray-700 shadow-sm">
+              <div className="flex items-center gap-2 mb-4">
+                <TrendingUp className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                <h3 className="text-lg font-semibold text-gray-800 dark:text-white">
+                  {t("priorityDistribution")}
+                </h3>
               </div>
 
-              <div>
-                <div className="flex justify-between text-sm mb-1">
-                  <span className="text-gray-600 dark:text-gray-300 flex items-center gap-1">
-                    <span className="w-2 h-2 bg-blue-500 rounded-full" />
-                    {t('priorityNormal')}
-                  </span>
-                  <span className="font-semibold text-gray-800 dark:text-white">
-                    {useMemo(() => {
-                      const counts = { high: 0, normal: 0, low: 0 };
-                      tasks.forEach((task) => {
-                        if (task.deleted || checkIsDone(task.status)) return;
-                        if (task.checklist && task.checklist.length > 0) {
-                          task.checklist.forEach((item) => {
-                            if (item.done) return;
-                            const priority = item.priority || 'normal';
-                            if (counts.hasOwnProperty(priority)) counts[priority]++;
-                          });
-                        }
-                      });
-                      return counts.normal;
-                    }, [tasks])}
-                  </span>
-                </div>
-                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                  <div
-                    className="bg-blue-500 h-2 rounded-full"
-                    style={{
-                      width: `${
-                        useMemo(() => {
-                          const counts = { high: 0, normal: 0, low: 0 };
-                          let total = 0;
-                          tasks.forEach((task) => {
-                            if (task.deleted || checkIsDone(task.status)) return;
-                            if (task.checklist && task.checklist.length > 0) {
-                              task.checklist.forEach((item) => {
-                                if (item.done) return;
-                                total++;
-                                const priority = item.priority || 'normal';
-                                if (counts.hasOwnProperty(priority)) counts[priority]++;
-                              });
-                            }
-                          });
-                          return total > 0 ? (counts.normal / total) * 100 : 0;
-                        }, [tasks])}%`,
-                    }}
-                  />
-                </div>
-              </div>
+              <div className="space-y-3">
+                {total > 0 ? (
+                  <>
+                    <div>
+                      <div className="flex justify-between text-sm mb-1">
+                        <span className="text-gray-600 dark:text-gray-300 flex items-center gap-1">
+                          <span className="w-2 h-2 bg-red-500 rounded-full" />
+                          {t("priorityHigh")}
+                        </span>
+                        <span className="font-semibold text-gray-800 dark:text-white">
+                          {priorityCounts.Hög}
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                        <div
+                          className="bg-red-500 h-2 rounded-full"
+                          style={{ width: `${total > 0 ? (priorityCounts.Hög / total) * 100 : 0}%` }}
+                        />
+                      </div>
+                    </div>
 
-              <div>
-                <div className="flex justify-between text-sm mb-1">
-                  <span className="text-gray-600 dark:text-gray-300 flex items-center gap-1">
-                    <span className="w-2 h-2 bg-green-500 rounded-full" />
-                    {t('priorityLow')}
-                  </span>
-                  <span className="font-semibold text-gray-800 dark:text-white">
-                    {useMemo(() => {
-                      const counts = { high: 0, normal: 0, low: 0 };
-                      tasks.forEach((task) => {
-                        if (task.deleted || checkIsDone(task.status)) return;
-                        if (task.checklist && task.checklist.length > 0) {
-                          task.checklist.forEach((item) => {
-                            if (item.done) return;
-                            const priority = item.priority || 'normal';
-                            if (counts.hasOwnProperty(priority)) counts[priority]++;
-                          });
-                        }
-                      });
-                      return counts.low;
-                    }, [tasks])}
-                  </span>
-                </div>
-                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                  <div
-                    className="bg-green-500 h-2 rounded-full"
-                    style={{
-                      width: `${
-                        useMemo(() => {
-                          const counts = { high: 0, normal: 0, low: 0 };
-                          let total = 0;
-                          tasks.forEach((task) => {
-                            if (task.deleted || checkIsDone(task.status)) return;
-                            if (task.checklist && task.checklist.length > 0) {
-                              task.checklist.forEach((item) => {
-                                if (item.done) return;
-                                total++;
-                                const priority = item.priority || 'normal';
-                                if (counts.hasOwnProperty(priority)) counts[priority]++;
-                              });
-                            }
-                          });
-                          return total > 0 ? (counts.low / total) * 100 : 0;
-                        }, [tasks])}%`,
-                    }}
-                  />
-                </div>
+                    <div>
+                      <div className="flex justify-between text-sm mb-1">
+                        <span className="text-gray-600 dark:text-gray-300 flex items-center gap-1">
+                          <span className="w-2 h-2 bg-blue-500 rounded-full" />
+                          {t("priorityNormal")}
+                        </span>
+                        <span className="font-semibold text-gray-800 dark:text-white">
+                          {priorityCounts.Normal}
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                        <div
+                          className="bg-blue-500 h-2 rounded-full"
+                          style={{ width: `${total > 0 ? (priorityCounts.Normal / total) * 100 : 0}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="flex justify-between text-sm mb-1">
+                        <span className="text-gray-600 dark:text-gray-300 flex items-center gap-1">
+                          <span className="w-2 h-2 bg-green-500 rounded-full" />
+                          {t("priorityLow")}
+                        </span>
+                        <span className="font-semibold text-gray-800 dark:text-white">
+                          {priorityCounts.Låg}
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                        <div
+                          className="bg-green-500 h-2 rounded-full"
+                          style={{ width: `${total > 0 ? (priorityCounts.Låg / total) * 100 : 0}%` }}
+                        />
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-center text-gray-400 dark:text-gray-500 py-4">
+                    {t("noSubtasks") || "No active subtasks"}
+                  </div>
+                )}
               </div>
-            </>
-          )}
-        </div>
-      </div>
+            </div>
+          );
+        })()}
       </div>
 
       {/* Active Tasks List */}

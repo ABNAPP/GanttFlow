@@ -69,6 +69,93 @@ export const getTaskDisplayStatus = (task, nowDate = new Date()) => {
 };
 
 /**
+ * Normalize subtask priority to standard format: 'Hög', 'Normal', or 'Låg'
+ * Single source of truth for subtask priority normalization
+ * IMPORTANT: Priority exists ONLY on subtasks (checklist items), NOT on main tasks
+ * 
+ * @param {Object|string} subtaskOrPriority - Checklist item/subtask object OR raw priority string
+ * @returns {string} Normalized priority: 'Hög', 'Normal', or 'Låg' (default)
+ */
+export const normalizeSubtaskPriority = (subtaskOrPriority) => {
+  if (!subtaskOrPriority) return 'Normal';
+  
+  // If it's a string, treat it as raw priority
+  if (typeof subtaskOrPriority === 'string') {
+    const normalized = subtaskOrPriority.trim().toLowerCase();
+    if (normalized === 'high' || normalized === 'hög' || normalized === 'hog') {
+      return 'Hög';
+    }
+    if (normalized === 'low' || normalized === 'låg' || normalized === 'lag') {
+      return 'Låg';
+    }
+    // Default to Normal for 'normal' or any unknown value
+    return 'Normal';
+  }
+  
+  // If it's an object (subtask), read from priority or prioritet
+  if (typeof subtaskOrPriority === 'object') {
+    // Read from subtask.priority (primary) or subtask.prioritet (backward compatibility)
+    const rawPriority = subtaskOrPriority.priority || subtaskOrPriority.prioritet;
+    if (!rawPriority) return 'Normal';
+    
+    const normalized = String(rawPriority).trim().toLowerCase();
+    
+    // Map to Swedish standard: Hög, Normal, Låg
+    if (normalized === 'high' || normalized === 'hög' || normalized === 'hog') {
+      return 'Hög';
+    }
+    if (normalized === 'low' || normalized === 'låg' || normalized === 'lag') {
+      return 'Låg';
+    }
+    // Default to Normal for 'normal' or any unknown value
+    return 'Normal';
+  }
+  
+  // Fallback
+  return 'Normal';
+};
+
+/**
+ * Check if a subtask (checklist item) is active (should be counted in Priority Distribution and Belastning)
+ * Single source of truth for subtask filtering
+ * 
+ * This function matches UI's real behavior:
+ * - Excludes subtasks marked as done/checked (item.done === true)
+ * - Excludes subtasks that are deleted (item.deleted === true, if field exists)
+ * - Excludes subtasks that are archived (item.archived === true, if field exists)
+ * 
+ * @param {Object} subtask - Checklist item/subtask object
+ * @returns {boolean} - True if subtask is active (should be counted)
+ */
+export const isActiveSubtask = (subtask) => {
+  if (!subtask || typeof subtask !== 'object') {
+    // Fail-safe: if subtask is invalid, don't count it
+    if (import.meta.env.DEV && typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+      console.warn('[isActiveSubtask] Invalid subtask:', subtask);
+    }
+    return false;
+  }
+  
+  // Exclude done/checked subtasks
+  if (subtask.done === true) {
+    return false;
+  }
+  
+  // Exclude deleted subtasks (if field exists)
+  if (subtask.deleted === true) {
+    return false;
+  }
+  
+  // Exclude archived subtasks (if field exists)
+  if (subtask.archived === true) {
+    return false;
+  }
+  
+  // All checks passed - subtask is active
+  return true;
+};
+
+/**
  * Get time status (overdue/warning) for a task or checklist item
  * Source: src/utils/helpers.js - getTimeStatus
  */

@@ -16,4 +16,6 @@ export {
   hasOverdueChecklistItems,
   getTaskOverallStatus,
   getTaskDisplayStatus,
+  normalizeSubtaskPriority,
+  isActiveSubtask,
 } from './task';
