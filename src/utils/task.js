@@ -156,6 +156,76 @@ export const isActiveSubtask = (subtask) => {
 };
 
 /**
+ * Get active subtasks for metrics (Priority Distribution, Belastning, WorkloadTasksModal)
+ * SINGLE SOURCE OF TRUTH for all analytics/metrics that count from subtasks
+ * 
+ * Task filter:
+ * - Exclude if task.deleted === true
+ * - Exclude if checkIsDone(task.status) === true
+ * 
+ * Subtask filter:
+ * - Exclude if !isActiveSubtask(item)
+ * 
+ * Priority:
+ * - Use normalizeSubtaskPriority(item) => "Hög" | "Normal" | "Låg"
+ * 
+ * @param {Array} tasks - Array of task objects
+ * @returns {Array} Array of standardized subtask objects:
+ *   {
+ *     taskId, taskTitle, taskPhase, taskStartDate, taskEndDate, taskStatus,
+ *     itemId, itemText, itemStartDate, itemEndDate,
+ *     executor, priority,
+ *     _taskRef: task   (for reference back to original task)
+ *   }
+ */
+export const getActiveSubtasksForMetrics = (tasks) => {
+  if (!Array.isArray(tasks)) return [];
+  
+  const rows = [];
+  
+  tasks.forEach((task) => {
+    // Task filter: exclude deleted tasks
+    if (task?.deleted) return;
+    
+    // Task filter: exclude done tasks
+    if (checkIsDone(task?.status)) return;
+    
+    // Get checklist items
+    const checklist = Array.isArray(task?.checklist) ? task.checklist : [];
+    
+    checklist.forEach((item, index) => {
+      // Subtask filter: only include active subtasks
+      if (!isActiveSubtask(item)) return;
+      
+      // Extract executor (support multiple field names for backward compatibility)
+      const executor = (item.executor || item.assignee || item.handlaggare || item.hl || '').trim() || null;
+      
+      // Normalize priority (using centralized function)
+      const priority = normalizeSubtaskPriority(item);
+      
+      // Create standardized row object
+      rows.push({
+        taskId: task.id || `task-${index}`,
+        taskTitle: task.title || '',
+        taskPhase: task.phase || null,
+        taskStartDate: task.startDate || null,
+        taskEndDate: task.endDate || null,
+        taskStatus: task.status || null,
+        itemId: item.id || `${task.id || 'task'}:${index}`,
+        itemText: item.text || '',
+        itemStartDate: item.startDate || null,
+        itemEndDate: item.endDate || null,
+        executor: executor,
+        priority: priority, // "Hög" | "Normal" | "Låg"
+        _taskRef: task, // Reference to original task for modal clicks
+      });
+    });
+  });
+  
+  return rows;
+};
+
+/**
  * Get time status (overdue/warning) for a task or checklist item
  * Source: src/utils/helpers.js - getTimeStatus
  */

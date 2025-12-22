@@ -1,6 +1,6 @@
 import { memo, useMemo } from 'react';
 import { X, Filter, AlertTriangle } from 'lucide-react';
-import { checkIsDone, getTimeStatus } from '../../utils/helpers';
+import { checkIsDone, getTimeStatus, getActiveSubtasksForMetrics } from '../../utils/helpers';
 
 export const WorkloadTasksModal = memo(({
   isOpen,
@@ -11,37 +11,44 @@ export const WorkloadTasksModal = memo(({
   warningThreshold,
   onTaskClick,
   t,
-  getActiveSubtasksByExecutor,
 }) => {
   const roleItems = useMemo(() => {
     if (!Array.isArray(tasks) || !role || !roleLabel) return [];
     
     // For executor role, show subtasks (checklist items) instead of main tasks
-    // Uses same getActiveSubtasksByExecutor function as summary to ensure consistency
-    if (role === 'executor' && getActiveSubtasksByExecutor) {
-      const allSubtasks = getActiveSubtasksByExecutor(tasks);
-      return allSubtasks
-        .filter(({ executor }) => {
+    // Uses getActiveSubtasksForMetrics (SINGLE SOURCE OF TRUTH) to ensure consistency
+    if (role === 'executor') {
+      const rows = getActiveSubtasksForMetrics(tasks)
+        .filter((row) => {
           // Match exact name (case-insensitive)
-          return executor && executor.trim().toLowerCase() === roleLabel.trim().toLowerCase();
+          return row.executor && row.executor.trim().toLowerCase() === roleLabel.trim().toLowerCase();
         })
-        .map(({ task, item, priority }) => ({
+        .map((row) => ({
           type: 'subtask',
-          task,
-          item,
+          task: row._taskRef, // Reference to original task for onTaskClick
+          item: {
+            id: row.itemId,
+            text: row.itemText,
+            startDate: row.itemStartDate,
+            endDate: row.itemEndDate,
+            done: false, // Already filtered by isActiveSubtask
+          },
           // Use subtask dates if available, otherwise task dates
-          startDate: item.startDate || task.startDate || '',
-          endDate: item.endDate || task.endDate || '',
-          title: item.text || t('subtask'),
-          phase: task.phase,
-          client: task.client,
-          priority: priority, // Already normalized by getActiveSubtasksByExecutor
+          startDate: row.itemStartDate || row.taskStartDate || '',
+          endDate: row.itemEndDate || row.taskEndDate || '',
+          title: row.itemText || t('subtask'),
+          phase: row.taskPhase,
+          client: row._taskRef?.client || null,
+          priority: row.priority, // Already normalized by getActiveSubtasksForMetrics
         }))
         .sort((a, b) => {
+          // Sort by itemStartDate (fallback to taskStartDate)
           const dateA = a.startDate ? new Date(a.startDate) : new Date(0);
           const dateB = b.startDate ? new Date(b.startDate) : new Date(0);
           return dateA - dateB;
         });
+      
+      return rows;
     }
     
     // For other roles, show main tasks (backward compatible)
@@ -68,7 +75,7 @@ export const WorkloadTasksModal = memo(({
         const dateB = b.startDate ? new Date(b.startDate) : new Date(0);
         return dateA - dateB;
       });
-  }, [tasks, role, roleLabel, getActiveSubtasksByExecutor, t]);
+  }, [tasks, role, roleLabel, t]);
 
   if (!isOpen) return null;
 

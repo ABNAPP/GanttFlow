@@ -1,98 +1,10 @@
 import { memo, useMemo, useState, useEffect } from 'react';
 import { BarChart3, CheckCircle, Clock, AlertTriangle, Calendar, Filter, Users, Layers, Tag, TrendingUp, ChevronDown, ChevronRight } from 'lucide-react';
-import { checkIsDone, calculateChecklistProgress, hasOverdueChecklistItems, getTimeStatus, getTaskDisplayStatus, normalizeSubtaskPriority, isActiveSubtask } from '../../utils/helpers';
+import { checkIsDone, calculateChecklistProgress, hasOverdueChecklistItems, getTimeStatus, getTaskDisplayStatus, normalizeSubtaskPriority, isActiveSubtask, getActiveSubtasksForMetrics } from '../../utils/helpers';
 import { WorkloadTasksModal } from '../modals/WorkloadTasksModal';
 import { QuickListSection } from './QuickListSection';
 
 // normalizeSubtaskPriority and isActiveSubtask are now imported from utils/helpers
-
-/**
- * Get active subtasks (checklist items) grouped by executor
- * This is the single source of truth for workload calculations
- * IMPORTANT: This function is used by both the summary count and the detail dialog
- * to ensure they always show the same data. Any changes here affect both views.
- * 
- * FILTERING RULES (Belastning):
- * - Only filters: task.deleted === false, item.done === false, item.executor exists
- * - Does NOT filter by task.status (Planerad/Pågående/Klar) - Belastning counts ALL active subtasks
- *   regardless of main task status. This ensures Belastning badges don't change when task status changes.
- * 
- * @param {Array} tasks - All tasks
- * @returns {Array} Array of { task, item, executor, priority } for active subtasks
- */
-const getActiveSubtasksByExecutor = (tasks) => {
-  if (!Array.isArray(tasks)) return [];
-  
-  const subtasks = [];
-  let rawCount = 0;
-  let activeFilteredCount = 0;
-  
-  tasks.forEach((task) => {
-    // Only filter by deleted - NOT by task status (Belastning counts subtasks regardless of task status)
-    if (task.deleted) return;
-    // NOTE: We intentionally do NOT filter by checkIsDone(task.status) here
-    // Belastning should show all active subtasks regardless of whether task is Planerad/Pågående/Klar
-    
-    // Process checklist items
-    (task.checklist || []).forEach((item) => {
-      rawCount++;
-      
-      // Only count active subtasks (use centralized function)
-      if (!isActiveSubtask(item)) return;
-      
-      const executor = item.executor && item.executor.trim() !== '' ? item.executor.trim() : null;
-      if (executor) {
-        activeFilteredCount++;
-        
-        // Use normalizeSubtaskPriority helper - single source of truth for subtask priority
-        // IMPORTANT: Priority exists ONLY on subtasks, never on main tasks
-        const normalizedPriority = normalizeSubtaskPriority(item);
-        
-        // Diagnostic logging (temporary - remove after verification)
-        if (process.env.NODE_ENV === 'development' && executor.toLowerCase() === 'ali' && activeFilteredCount <= 3) {
-          console.log('[Workload Debug] Subtask raw data:', {
-            itemKeys: Object.keys(item),
-            hasPriority: 'priority' in item,
-            hasPrioritet: 'prioritet' in item,
-            priorityValue: item.priority,
-            prioritetValue: item.prioritet,
-            normalizedPriority,
-            itemText: item.text?.substring(0, 30),
-            taskStatus: task.status // Log task status to verify it's not filtered
-          });
-        }
-        
-        subtasks.push({
-          task,
-          item,
-          executor,
-          priority: normalizedPriority,
-        });
-      }
-    });
-  });
-  
-  // Diagnostic logging (temporary - remove after verification)
-  if (process.env.NODE_ENV === 'development' && tasks.length > 0) {
-    const aliSubtasks = subtasks.filter(s => s.executor.toLowerCase() === 'ali');
-    if (aliSubtasks.length > 0) {
-      const priorityCounts = { hog: 0, normal: 0, lag: 0 };
-      aliSubtasks.forEach(s => {
-        if (s.priority === 'Hög') priorityCounts.hog++;
-        else if (s.priority === 'Normal') priorityCounts.normal++;
-        else if (s.priority === 'Låg') priorityCounts.lag++;
-      });
-      console.log('[Workload Debug] getActiveSubtasksByExecutor for Ali:', {
-        rawSubtasksCount: rawCount,
-        activeFilteredCount: aliSubtasks.length,
-        countsPerPriority: priorityCounts,
-        sum: priorityCounts.hog + priorityCounts.normal + priorityCounts.lag
-      });
-    }
-  }
-  
-  return subtasks;
-};
 
 /**
  * Debug Panel Component - Only visible in development
@@ -352,6 +264,10 @@ export const Dashboard = memo(({ tasks, t, onTaskClick, warningThreshold, user, 
       { key: 'pl', label: t('statPl'), short: 'PL' },
     ];
 
+    // Get active subtasks ONCE for executor role (SINGLE SOURCE OF TRUTH)
+    // This ensures Belastning uses same filter as Prioritetsfördelning
+    const activeSubtasksRows = getActiveSubtasksForMetrics(tasks);
+
     const result = {};
     roles.forEach(({ key, label, short }) => {
       const counts = {};
@@ -359,36 +275,33 @@ export const Dashboard = memo(({ tasks, t, onTaskClick, warningThreshold, user, 
       // For executor role, track priority breakdown per handler
       const priorityCounts = key === 'executor' ? {} : null;
       
-      tasks.forEach((task) => {
-        if (task.deleted) return;
-        
-        if (key === 'executor') {
-          // For HL, use shared helper function to get active subtasks
-          // This ensures summary count matches detail dialog exactly
-          // NOTE: We do NOT filter by task.status here - Belastning counts ALL active subtasks
-          // regardless of whether task is Planerad/Pågående/Klar
-          const activeSubtasks = getActiveSubtasksByExecutor([task]);
-          activeSubtasks.forEach(({ executor, priority }) => {
+      if (key === 'executor') {
+        // For HL, use activeSubtasksRows (SINGLE SOURCE OF TRUTH)
+        // This ensures summary count matches detail dialog and Prioritetsfördelning exactly
+        // Filter rows where executor is not null
+        activeSubtasksRows
+          .filter((row) => row.executor != null)
+          .forEach((row) => {
             // Normalize name (case-insensitive) for aggregation
-            const normalized = executor.toLowerCase();
+            const normalized = row.executor.toLowerCase();
             // Preserve original case of first occurrence
             if (!nameMap[normalized]) {
-              nameMap[normalized] = executor;
+              nameMap[normalized] = row.executor;
             }
             counts[normalized] = (counts[normalized] || 0) + 1;
             
             // Track priority breakdown for executor role
-            // Priority is already normalized by getActiveSubtasksByExecutor
+            // Priority is already normalized by getActiveSubtasksForMetrics
             if (priorityCounts) {
               if (!priorityCounts[normalized]) {
                 priorityCounts[normalized] = { hog: 0, normal: 0, lag: 0 };
               }
               // Map normalized priority (Hög/Normal/Låg) to keys (hog/normal/lag)
-              if (priority === 'Hög') {
+              if (row.priority === 'Hög') {
                 priorityCounts[normalized].hog = (priorityCounts[normalized].hog || 0) + 1;
-              } else if (priority === 'Normal') {
+              } else if (row.priority === 'Normal') {
                 priorityCounts[normalized].normal = (priorityCounts[normalized].normal || 0) + 1;
-              } else if (priority === 'Låg') {
+              } else if (row.priority === 'Låg') {
                 priorityCounts[normalized].lag = (priorityCounts[normalized].lag || 0) + 1;
               } else {
                 // Fallback: treat unknown as Normal
@@ -396,10 +309,11 @@ export const Dashboard = memo(({ tasks, t, onTaskClick, warningThreshold, user, 
               }
             }
           });
-        } else {
-          // For other roles (UA, CAD, etc.), filter by task status (backward compatible)
+      } else {
+        // For other roles (UA, CAD, etc.), filter by task status (backward compatible)
+        tasks.forEach((task) => {
+          if (task.deleted) return;
           if (checkIsDone(task.status)) return;
-          
           const val = task[key] && task[key].trim() !== '' ? task[key].trim() : null;
           if (val) {
             // Normalize name (case-insensitive) for aggregation
@@ -410,8 +324,8 @@ export const Dashboard = memo(({ tasks, t, onTaskClick, warningThreshold, user, 
             }
             counts[normalized] = (counts[normalized] || 0) + 1;
           }
-        }
-      });
+        });
+      }
       
       // Convert back to original names and sort alphabetically by name
       if (key === 'executor' && priorityCounts) {
@@ -420,13 +334,10 @@ export const Dashboard = memo(({ tasks, t, onTaskClick, warningThreshold, user, 
           const priorityData = priorityCounts[normalized] || { hog: 0, normal: 0, lag: 0 };
           const prioritySum = priorityData.hog + priorityData.normal + priorityData.lag;
           
-          // Diagnostic logging (temporary - remove after verification)
-          if (process.env.NODE_ENV === 'development' && nameMap[normalized]?.toLowerCase() === 'ali') {
-            console.log(`[Workload Debug] ${nameMap[normalized]}:`, {
-              rawCount: count,
-              prioritySum,
+          // DEV-check: verify total matches priority sum
+          if (import.meta.env.DEV && count !== prioritySum) {
+            console.warn(`[Workload Debug] ${nameMap[normalized]}: total (${count}) !== prioritySum (${prioritySum})`, {
               byPriority: priorityData,
-              match: count === prioritySum ? '✓' : '✗ MISMATCH'
             });
           }
           
@@ -479,11 +390,15 @@ export const Dashboard = memo(({ tasks, t, onTaskClick, warningThreshold, user, 
     return result;
   }, [tasks, t]);
 
-  // DEBUG: Log distribution counts (only in development)
+  // DEBUG: Log distribution counts (only in development, localhost)
   useEffect(() => {
     if (import.meta.env.PROD) return; // Skip in production
+    if (typeof window === 'undefined' || window.location.hostname !== 'localhost') return; // Only localhost
     
     if (!Array.isArray(tasks) || tasks.length === 0) return;
+    
+    // Use getActiveSubtasksForMetrics (SINGLE SOURCE OF TRUTH) for all metrics
+    const activeSubtasksRows = getActiveSubtasksForMetrics(tasks);
     
     // Calculate status counts from tasks - use getTaskDisplayStatus (SINGLE SOURCE OF TRUTH for display)
     const statusCounts = { Planerad: 0, Pågående: 0, Klar: 0, Försenad: 0 };
@@ -496,63 +411,24 @@ export const Dashboard = memo(({ tasks, t, onTaskClick, warningThreshold, user, 
       statusCounts[displayStatus] = (statusCounts[displayStatus] || 0) + 1;
     });
     
-    // Calculate priority counts from subtasks (EXACT same logic as Priority Distribution)
-    // Use centralized functions: isActiveSubtask + normalizeSubtaskPriority
-    const priorityCounts = { hög: 0, normal: 0, låg: 0 };
-    let firstSubtaskId = null;
-    let firstSubtaskPriority = null;
-    let firstSubtaskRawPriority = null;
-    let firstTaskId = null;
-    let firstTaskRawStatus = null;
-    let firstTaskEffectiveStatus = null;
-    let firstTaskEndDate = null;
-    
-    tasks.forEach((task) => {
-      if (task.deleted) return;
-      
-      // Track first task for sample
-      if (!firstTaskId) {
-        firstTaskId = task.id || 'unknown';
-        firstTaskRawStatus = task.status || 'unknown';
-        firstTaskEffectiveStatus = task.status || 'unknown'; // Status is stored directly in task.status
-        firstTaskEndDate = task.endDate || null;
-      }
-      
-      // Skip done tasks for priority counting (same as Priority Distribution)
-      if (checkIsDone(task.status)) return;
-      
-      // Count priorities from checklist items (EXACT same logic as Priority Distribution)
-      if (task.checklist && task.checklist.length > 0) {
-        task.checklist.forEach((item) => {
-          if (!isActiveSubtask(item)) return; // Skip inactive items (matches UI behavior)
-          
-          // Track first subtask for sample
-          if (!firstSubtaskId) {
-            firstSubtaskId = item.id || 'unknown';
-            firstSubtaskRawPriority = item.priority || item.prioritet || 'normal';
-            firstSubtaskPriority = normalizeSubtaskPriority(item);
-          }
-          
-          // Use normalizeSubtaskPriority (single source of truth)
-          const normalizedPriority = normalizeSubtaskPriority(item);
-          const priorityKey = normalizedPriority.toLowerCase();
-          if (priorityCounts.hasOwnProperty(priorityKey)) {
-            priorityCounts[priorityKey]++;
-          }
-        });
+    // Calculate priority counts from activeSubtasksRows (SINGLE SOURCE OF TRUTH)
+    const priorityCounts = { Hög: 0, Normal: 0, Låg: 0 };
+    activeSubtasksRows.forEach((row) => {
+      if (Object.prototype.hasOwnProperty.call(priorityCounts, row.priority)) {
+        priorityCounts[row.priority]++;
       }
     });
     
-    // Map priority counts to Swedish format for display (matching UI labels)
-    // normalizeSubtaskPriority returns Swedish format, so we need to map from Swedish to English for counts
-    const priorityCountsSwedish = {
-      Hög: priorityCounts.hög || 0,
-      Normal: priorityCounts.normal || 0,
-      Låg: priorityCounts.låg || 0,
-    };
+    const priorityTotal = priorityCounts.Hög + priorityCounts.Normal + priorityCounts.Låg;
+    
+    // Calculate Belastning HL total (sum of all executor totals)
+    const belastningTotal = workloadByRole.executor?.total || 0;
+    
+    // Count active subtasks without executor
+    const subtasksWithoutExecutor = activeSubtasksRows.filter((row) => !row.executor).length;
     
     // Log debug information
-    console.group('🔍 DEBUG Distribution Check');
+    console.group('🔍 DEBUG Distribution Check (localhost only)');
     console.log('📊 Status counts from TASKS (getTaskDisplayStatus):', {
       Planerade: statusCounts.Planerad,
       Pågående: statusCounts.Pågående,
@@ -562,27 +438,31 @@ export const Dashboard = memo(({ tasks, t, onTaskClick, warningThreshold, user, 
       'Source of status': 'TASK (display status via getTaskDisplayStatus)',
       'Note': 'Försenad is calculated from endDate if overdue, not stored in task.status',
     });
-    console.log('🎯 Priority counts from SUBTASKS (subtask.priority):', {
-      ...priorityCountsSwedish,
-      _raw: priorityCounts, // Show raw counts (high/normal/low) for reference
-      'Source of priority': 'SUBTASK',
+    console.log('🎯 Priority counts from SUBTASKS (getActiveSubtasksForMetrics):', {
+      Hög: priorityCounts.Hög,
+      Normal: priorityCounts.Normal,
+      Låg: priorityCounts.Låg,
+      Total: priorityTotal,
+      'Source of priority': 'SUBTASK (via getActiveSubtasksForMetrics)',
     });
-    console.log('📝 Sample task used (for status):', {
-      id: firstTaskId,
-      status: firstTaskRawStatus, // Status is stored directly in task.status
-      endDate: firstTaskEndDate,
+    console.log('👥 Belastning HL (executor) totals:', {
+      Total: belastningTotal,
+      'Source': 'getActiveSubtasksForMetrics (filtered by executor != null)',
+      'Note': 'Only counts subtasks with executor assigned',
     });
-    console.log('📋 Sample subtask used (for priority):', {
-      id: firstSubtaskId,
-      rawPriority: firstSubtaskRawPriority,
-      normalizedPriority: firstSubtaskPriority,
+    console.log('⚠️ Active subtasks WITHOUT executor:', {
+      Count: subtasksWithoutExecutor,
+      'Note': 'These are included in Prioritetsfördelning but NOT in Belastning HL',
     });
     console.log('✅ Verification:', {
-      'Status counts match UI': true, // These are the exact values used in UI (from stats.planned, stats.inProgress, etc.)
-      'Priority counts match UI': true, // These are the exact values used in UI (from Priority Distribution useMemo)
+      'Prioritetsfördelning total': priorityTotal,
+      'Belastning HL total': belastningTotal,
+      'Difference (OK if executor missing)': priorityTotal - belastningTotal,
+      'Subtasks without executor': subtasksWithoutExecutor,
+      'Match': priorityTotal - belastningTotal === subtasksWithoutExecutor ? '✓' : '⚠️ Check',
     });
     console.groupEnd();
-  }, [tasks]);
+  }, [tasks, workloadByRole]);
 
   if (!stats) {
     return (
@@ -1027,20 +907,14 @@ export const Dashboard = memo(({ tasks, t, onTaskClick, warningThreshold, user, 
           // IMPORTANT:
           // Do NOT call useMemo inside this IIFE (React Hooks rule).
           // Compute counts without hooks here to keep build stable.
+          // Use getActiveSubtasksForMetrics (SINGLE SOURCE OF TRUTH)
+          const rows = getActiveSubtasksForMetrics(tasks);
           const priorityCounts = { Hög: 0, Normal: 0, Låg: 0 };
-
-          tasks.forEach((task) => {
-            if (task?.deleted || checkIsDone(task?.status)) return;
-
-            const checklist = Array.isArray(task?.checklist) ? task.checklist : [];
-            checklist.forEach((item) => {
-              if (!isActiveSubtask(item)) return;
-
-              const normalizedPriority = normalizeSubtaskPriority(item);
-              if (Object.prototype.hasOwnProperty.call(priorityCounts, normalizedPriority)) {
-                priorityCounts[normalizedPriority]++;
-              }
-            });
+          
+          rows.forEach((row) => {
+            if (Object.prototype.hasOwnProperty.call(priorityCounts, row.priority)) {
+              priorityCounts[row.priority]++;
+            }
           });
 
           const total = priorityCounts.Hög + priorityCounts.Normal + priorityCounts.Låg;
@@ -1418,7 +1292,6 @@ export const Dashboard = memo(({ tasks, t, onTaskClick, warningThreshold, user, 
           warningThreshold={warningThreshold}
           onTaskClick={onTaskClick}
           t={t}
-          getActiveSubtasksByExecutor={getActiveSubtasksByExecutor}
         />
       )}
     </div>

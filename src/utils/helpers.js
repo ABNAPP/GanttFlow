@@ -18,4 +18,5 @@ export {
   getTaskDisplayStatus,
   normalizeSubtaskPriority,
   isActiveSubtask,
+  getActiveSubtasksForMetrics,
 } from './task';
