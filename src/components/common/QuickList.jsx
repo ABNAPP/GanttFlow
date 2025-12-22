@@ -1,4 +1,5 @@
-import { memo, useState, useEffect } from 'react';
+import { memo, useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Plus, Trash2, List, Circle, Edit2, Archive, X, Check, Zap, MessageSquare } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuickList } from '../../hooks/useQuickList';
@@ -16,6 +17,8 @@ export const QuickList = memo(({ user, t }) => {
   const [editType, setEditType] = useState('');
   const [editComment, setEditComment] = useState('');
   const [showComment, setShowComment] = useState({});
+  const [commentTooltipPos, setCommentTooltipPos] = useState({});
+  const commentButtonRefs = useRef({});
   const [isMobile, setIsMobile] = useState(false);
 
   // Debug log
@@ -144,7 +147,7 @@ export const QuickList = memo(({ user, t }) => {
       </div>
 
       {/* Items List */}
-      <div className="flex-1 overflow-y-auto min-h-0 p-2">
+      <div className="flex-1 overflow-y-auto min-h-0 p-2" style={{ overflowX: 'visible' }}>
         {items.length === 0 ? (
           <div className="p-6 text-center text-amber-600/60 dark:text-amber-400/60 text-sm">
             {t('quickListEmpty')}
@@ -247,6 +250,9 @@ export const QuickList = memo(({ user, t }) => {
                     {item.comment && typeof item.comment === 'string' && item.comment.trim() && (
                       <div className="relative">
                         <button
+                          ref={(el) => {
+                            if (el) commentButtonRefs.current[item.id] = el;
+                          }}
                           onClick={(e) => {
                             e.stopPropagation();
                             if (isMobile) {
@@ -258,6 +264,16 @@ export const QuickList = memo(({ user, t }) => {
                           }}
                           onMouseEnter={() => {
                             if (!isMobile) {
+                              const button = commentButtonRefs.current[item.id];
+                              if (button) {
+                                const rect = button.getBoundingClientRect();
+                                setCommentTooltipPos({
+                                  [item.id]: {
+                                    top: rect.top - 8,
+                                    right: window.innerWidth - rect.right,
+                                  }
+                                });
+                              }
                               setShowComment(prev => ({
                                 ...prev,
                                 [item.id]: true
@@ -278,51 +294,64 @@ export const QuickList = memo(({ user, t }) => {
                         >
                           <MessageSquare size={12} />
                         </button>
-                        {/* Comment Tooltip/Popup */}
+                        {/* Comment Tooltip/Popup - Portal for desktop to avoid overflow clipping */}
                         {showComment[item.id] && item.comment && (
-                          <div
-                            className={`absolute z-50 ${
-                              !isMobile
-                                ? 'bottom-full right-0 mb-2'
-                                : 'top-full right-0 mt-2'
-                            } w-64 sm:w-80 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-3 text-xs text-gray-700 dark:text-gray-200`}
-                            onClick={(e) => e.stopPropagation()}
-                            onMouseEnter={() => {
-                              if (!isMobile) {
-                                setShowComment(prev => ({
-                                  ...prev,
-                                  [item.id]: true
-                                }));
-                              }
-                            }}
-                            onMouseLeave={() => {
-                              if (!isMobile) {
-                                setShowComment(prev => ({
-                                  ...prev,
-                                  [item.id]: false
-                                }));
-                              }
-                            }}
-                          >
-                            <div className="flex items-start gap-2">
-                              <MessageSquare size={14} className="text-amber-500 dark:text-amber-400 flex-shrink-0 mt-0.5" />
-                              <p className="whitespace-pre-wrap break-words">{item.comment || ''}</p>
-                            </div>
-                            {isMobile && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
+                          <>
+                            {!isMobile && typeof document !== 'undefined' && createPortal(
+                              <div
+                                className="fixed z-[9999] w-64 sm:w-80 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-3 text-xs text-gray-700 dark:text-gray-200 pointer-events-auto"
+                                style={{
+                                  top: commentTooltipPos[item.id]?.top ? `${commentTooltipPos[item.id].top}px` : 'auto',
+                                  right: commentTooltipPos[item.id]?.right ? `${commentTooltipPos[item.id].right}px` : 'auto',
+                                  bottom: commentTooltipPos[item.id]?.top ? 'auto' : 'auto',
+                                  transform: commentTooltipPos[item.id]?.top ? 'translateY(-100%)' : 'none',
+                                  marginBottom: commentTooltipPos[item.id]?.top ? '8px' : '0',
+                                }}
+                                onClick={(e) => e.stopPropagation()}
+                                onMouseEnter={() => {
+                                  setShowComment(prev => ({
+                                    ...prev,
+                                    [item.id]: true
+                                  }));
+                                }}
+                                onMouseLeave={() => {
                                   setShowComment(prev => ({
                                     ...prev,
                                     [item.id]: false
                                   }));
                                 }}
-                                className="mt-2 text-xs text-amber-600 dark:text-amber-400 hover:underline"
                               >
-                                {t('cancel')}
-                              </button>
+                                <div className="flex items-start gap-2">
+                                  <MessageSquare size={14} className="text-amber-500 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                                  <p className="whitespace-pre-wrap break-words">{item.comment || ''}</p>
+                                </div>
+                              </div>,
+                              document.body
                             )}
-                          </div>
+                            {isMobile && (
+                              <div
+                                className="absolute z-[9999] top-full right-0 mt-2 w-64 sm:w-80 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-3 text-xs text-gray-700 dark:text-gray-200"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <div className="flex items-start gap-2">
+                                  <MessageSquare size={14} className="text-amber-500 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                                  <p className="whitespace-pre-wrap break-words">{item.comment || ''}</p>
+                                </div>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setShowComment(prev => ({
+                                      ...prev,
+                                      [item.id]: false
+                                    }));
+                                  }}
+                                  className="mt-2 text-xs text-amber-600 dark:text-amber-400 hover:underline"
+                                >
+                                  {t('cancel')}
+                                </button>
+                              </div>
+                            )}
+                          </>
                         )}
                       </div>
                     )}

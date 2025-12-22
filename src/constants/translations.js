@@ -266,7 +266,7 @@ export const TRANSLATIONS = {
     commentDeleted: 'Kommentar borttagen',
     // Quick List
     quickList: 'Snabb-lista',
-    quickListTitle: 'Personlig snabb-lista',
+    quickListTitle: 'Snabb-Lista',
     quickListPlaceholder: 'Lägg till snabb uppgift...',
     quickListEmpty: 'Inga snabba uppgifter',
     addQuickItem: 'Lägg till',
