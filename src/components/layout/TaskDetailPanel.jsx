@@ -12,6 +12,14 @@ export const TaskDetailPanel = memo(({
   t,
   lang,
 }) => {
+  // DEV-log: verify comments are present (localhost only)
+  useEffect(() => {
+    if (import.meta.env.DEV && typeof window !== 'undefined' && window.location.hostname === 'localhost' && task) {
+      console.log('[TaskDetailPanel render] comments length:', task.comments?.length);
+      console.log('[TaskDetailPanel render] comments data:', task.comments);
+    }
+  }, [task]);
+  
   // Close on Escape key
   useEffect(() => {
     if (!isOpen) return;
@@ -239,15 +247,19 @@ export const TaskDetailPanel = memo(({
             <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
               <MessageSquare size={16} />
               <span>{t('labelComments') || 'Comments'}</span>
+              <span className="text-xs bg-gray-200 dark:bg-gray-600 px-1.5 rounded-full">
+                {task.comments.length}
+              </span>
             </div>
             <div className="space-y-2 max-h-48 overflow-y-auto">
               {task.comments.map((comment, idx) => (
                 <div
-                  key={idx}
+                  key={comment.id || idx}
                   className="p-2 bg-gray-50 dark:bg-gray-700/50 rounded text-xs"
                 >
                   <div className="text-gray-500 dark:text-gray-400 mb-1">
-                    {comment.date ? new Date(comment.date).toLocaleString(lang === 'sv' ? 'sv-SE' : 'en-US') : ''}
+                    {comment.author && <span>{comment.author} • </span>}
+                    {comment.createdAt ? new Date(comment.createdAt).toLocaleString(lang === 'sv' ? 'sv-SE' : 'en-US') : (comment.date ? new Date(comment.date).toLocaleString(lang === 'sv' ? 'sv-SE' : 'en-US') : '')}
                   </div>
                   <div className="text-gray-800 dark:text-gray-200">
                     {comment.text}

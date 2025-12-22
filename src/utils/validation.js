@@ -88,6 +88,22 @@ export const validateTask = (data, id) => {
   const validStatuses = ['Planerad', 'Pågående', 'Klar', 'Försenad'];
   const status = validStatuses.includes(data.status) ? data.status : 'Planerad';
 
+  // Validate comments - ensure it's always an array
+  const comments = Array.isArray(data.comments)
+    ? data.comments.map((comment) => {
+        // Ensure each comment has required fields
+        if (!comment || typeof comment !== 'object') {
+          return null; // Skip invalid comments
+        }
+        return {
+          id: comment.id || generateId(),
+          text: typeof comment.text === 'string' ? comment.text : '',
+          createdAt: comment.createdAt && typeof comment.createdAt === 'string' ? comment.createdAt : new Date().toISOString(),
+          author: comment.author && typeof comment.author === 'string' ? comment.author.trim() : null,
+        };
+      }).filter(Boolean) // Remove null entries
+    : [];
+
   return {
     id: id || data.id || generateId(),
     client: typeof data.client === 'string' ? data.client : '',
@@ -99,11 +115,13 @@ export const validateTask = (data, id) => {
     agent: data.agent && typeof data.agent === 'string' ? data.agent.trim() : null,
     be: data.be && typeof data.be === 'string' ? data.be.trim() : null,
     pl: data.pl && typeof data.pl === 'string' ? data.pl.trim() : null,
+    executor: data.executor && typeof data.executor === 'string' ? data.executor.trim() : null,
     startDate: typeof data.startDate === 'string' ? data.startDate : '',
     endDate: typeof data.endDate === 'string' ? data.endDate : '',
     status,
     checklist,
     tags,
+    comments, // Always include comments as an array
     // Priority exists ONLY on subtasks, not on main tasks
     deleted: Boolean(data.deleted),
     deletedAt: data.deletedAt && typeof data.deletedAt === 'string' ? data.deletedAt : null,

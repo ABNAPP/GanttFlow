@@ -5,6 +5,9 @@ import { generateId, formatDate } from '../utils/helpers';
 import { showError, showSuccess } from '../utils/toast';
 import { validateTasks, validateTask } from '../utils/validation';
 
+// Helper function to normalize comments to always be an array
+const normalizeComments = (comments) => Array.isArray(comments) ? comments : [];
+
 export const useTasks = (user) => {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -195,7 +198,10 @@ export const useTasks = (user) => {
             const tasksData = snapshot.docs
               .map((d) => {
                 try {
-                  return validateTask(d.data(), d.id);
+                  const validated = validateTask(d.data(), d.id);
+                  // Ensure comments is always an array after validation
+                  validated.comments = Array.isArray(validated.comments) ? validated.comments : [];
+                  return validated;
                 } catch (err) {
                   console.warn(`Error validating task ${d.id}:`, err);
                   return null;
@@ -285,10 +291,19 @@ export const useTasks = (user) => {
         // Remove priority from task data - priority exists ONLY on subtasks (checklist items)
         const { priority, ...taskDataWithoutPriority } = taskData;
         
+        // Normalize comments and ensure each has an id
+        const normalizedComments = normalizeComments(taskData.comments).map(c => ({
+          id: c.id || generateId(),
+          text: typeof c.text === 'string' ? c.text : '',
+          createdAt: c.createdAt && typeof c.createdAt === 'string' ? c.createdAt : new Date().toISOString(),
+          author: c.author && typeof c.author === 'string' ? c.author.trim() : null,
+        }));
+        
         const newTask = {
           id: 'demo-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9),
           ...taskDataWithoutPriority,
           tags: taskData.tags || [],
+          comments: normalizedComments,
           // NOTE: Priority exists ONLY on subtasks, never on main tasks
           createdAt: new Date().toISOString(),
         };
@@ -331,6 +346,14 @@ export const useTasks = (user) => {
     // Remove priority from task data - priority exists ONLY on subtasks (checklist items)
     const { priority, ...taskDataWithoutPriority } = taskData;
     
+    // Normalize comments and ensure each has an id
+    const normalizedComments = normalizeComments(taskData.comments).map(c => ({
+      id: c.id || generateId(),
+      text: typeof c.text === 'string' ? c.text : '',
+      createdAt: c.createdAt && typeof c.createdAt === 'string' ? c.createdAt : new Date().toISOString(),
+      author: c.author && typeof c.author === 'string' ? c.author.trim() : null,
+    }));
+    
     // Ensure all checklist items have priority field (migration/consistency)
     const normalizedTaskData = {
         ...taskDataWithoutPriority,
@@ -340,6 +363,7 @@ export const useTasks = (user) => {
               priority: item.priority || 'normal', // Ensure priority is always present on subtasks
             }))
           : taskData.checklist,
+        comments: normalizedComments,
         createdAt: new Date().toISOString(),
       };
       
@@ -374,6 +398,17 @@ export const useTasks = (user) => {
       taskData.checklist = taskData.checklist.map(item => ({
         ...item,
         priority: item.priority || 'normal', // Ensure priority is always present on subtasks
+      }));
+    }
+    
+    // Only update comments if explicitly provided in taskData
+    if (Object.prototype.hasOwnProperty.call(taskData, 'comments')) {
+      // Normalize comments and ensure each has an id
+      taskData.comments = normalizeComments(taskData.comments).map(c => ({
+        id: c.id || generateId(),
+        text: typeof c.text === 'string' ? c.text : '',
+        createdAt: c.createdAt && typeof c.createdAt === 'string' ? c.createdAt : new Date().toISOString(),
+        author: c.author && typeof c.author === 'string' ? c.author.trim() : null,
       }));
     }
 

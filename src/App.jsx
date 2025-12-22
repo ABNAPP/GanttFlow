@@ -371,6 +371,12 @@ export default function App() {
   }, []);
 
   const handleSaveTask = useCallback(async (formData) => {
+    // DEV-log: verify comments are included (localhost only)
+    if (import.meta.env.DEV && typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+      console.log('[onSave->addTask] comments length:', formData.comments?.length);
+      console.log('[onSave->addTask] comments data:', formData.comments);
+    }
+    
     console.log('handleSaveTask called:', { 
       authLoading, 
       hasUser: !!user, 

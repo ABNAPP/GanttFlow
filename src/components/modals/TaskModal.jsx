@@ -34,6 +34,8 @@ export const TaskModal = memo(({
     comments: [],
   });
   const [newComment, setNewComment] = useState('');
+  const [editingCommentId, setEditingCommentId] = useState(null);
+  const [editingCommentText, setEditingCommentText] = useState('');
 
   const [newChecklistItem, setNewChecklistItem] = useState('');
   const [newTag, setNewTag] = useState('');
@@ -117,6 +119,8 @@ export const TaskModal = memo(({
     setNewChecklistPriority('normal');
     setEditingChecklistId(null);
     setNewComment('');
+    setEditingCommentId(null);
+    setEditingCommentText('');
     setIsDeleteConfirmOpen(false);
     setValidationErrors([]);
   }, [task, isOpen]);
@@ -216,6 +220,32 @@ export const TaskModal = memo(({
       ...prev,
       comments: (prev.comments || []).filter((c) => c.id !== commentId),
     }));
+  };
+
+  const startEditComment = (comment) => {
+    setEditingCommentId(comment.id);
+    setEditingCommentText(comment.text || '');
+  };
+
+  const cancelEditComment = () => {
+    setEditingCommentId(null);
+    setEditingCommentText('');
+  };
+
+  const saveEditComment = () => {
+    if (!editingCommentText.trim()) {
+      showError(t('commentEmpty') || 'Kommentaren kan inte vara tom');
+      return;
+    }
+    setFormData((prev) => ({
+      ...prev,
+      comments: (prev.comments || []).map((c) =>
+        c.id === editingCommentId
+          ? { ...c, text: editingCommentText.trim() }
+          : c
+      ),
+    }));
+    cancelEditComment();
   };
 
   const handleSubmit = async (e) => {
@@ -677,22 +707,75 @@ export const TaskModal = memo(({
                     key={comment.id}
                     className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-600 shadow-sm"
                   >
-                    <div className="flex items-start justify-between gap-2 mb-1">
-                      <div className="flex-1">
-                        <p className="text-sm text-gray-700 dark:text-gray-200">{comment.text}</p>
-                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                          {comment.author} • {new Date(comment.createdAt).toLocaleString(lang === 'sv' ? 'sv-SE' : 'en-US')}
-                        </p>
+                    {editingCommentId === comment.id ? (
+                      /* Edit Mode */
+                      <div className="space-y-2">
+                        <textarea
+                          value={editingCommentText}
+                          onChange={(e) => setEditingCommentText(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                              e.preventDefault();
+                              saveEditComment();
+                            }
+                          }}
+                          className="w-full border-2 border-indigo-300 dark:border-indigo-600 dark:bg-gray-700 rounded-lg px-3 py-2 text-sm resize-none outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 dark:focus:ring-indigo-800 text-gray-700 dark:text-gray-200"
+                          rows="3"
+                          aria-label={t('editComment') || 'Redigera kommentar'}
+                        />
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs text-gray-400 dark:text-gray-500">
+                            {comment.author} • {new Date(comment.createdAt).toLocaleString(lang === 'sv' ? 'sv-SE' : 'en-US')}
+                          </p>
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={saveEditComment}
+                              className="p-1.5 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 rounded transition-colors"
+                              aria-label={t('saveEdit') || 'Spara ändring'}
+                            >
+                              <Check size={16} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={cancelEditComment}
+                              className="p-1.5 text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+                              aria-label={t('cancelEdit') || 'Avbryt redigering'}
+                            >
+                              <XCircle size={16} />
+                            </button>
+                          </div>
+                        </div>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteComment(comment.id)}
-                        className="p-1 text-gray-400 hover:text-red-500 transition-colors flex-shrink-0"
-                        aria-label={t('deleteComment')}
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
+                    ) : (
+                      /* View Mode */
+                      <div className="flex items-start justify-between gap-2 mb-1">
+                        <div className="flex-1">
+                          <p className="text-sm text-gray-700 dark:text-gray-200">{comment.text}</p>
+                          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                            {comment.author} • {new Date(comment.createdAt).toLocaleString(lang === 'sv' ? 'sv-SE' : 'en-US')}
+                          </p>
+                        </div>
+                        <div className="flex gap-1 flex-shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => startEditComment(comment)}
+                            className="p-1 text-gray-400 hover:text-indigo-500 transition-colors"
+                            aria-label={t('editComment') || 'Redigera kommentar'}
+                          >
+                            <Edit2 size={14} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteComment(comment.id)}
+                            className="p-1 text-gray-400 hover:text-red-500 transition-colors"
+                            aria-label={t('deleteComment')}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
