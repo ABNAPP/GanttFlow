@@ -76,6 +76,7 @@ export const useQuickList = (user) => {
               priority: item.priority || 'normal',
               type: (item.type && typeof item.type === 'string' && item.type.trim()) ? item.type.trim() : undefined,
               comment: (item.comment && typeof item.comment === 'string' && item.comment.trim()) ? item.comment.trim() : undefined,
+              deadline: (item.deadline && typeof item.deadline === 'string' && item.deadline.trim()) ? item.deadline.trim() : undefined,
               createdAt: item.createdAt || new Date().toISOString(),
             };
           }).filter(item => item !== null);
@@ -111,6 +112,7 @@ export const useQuickList = (user) => {
                 priority: item.priority || 'normal',
                 type: (item.type && typeof item.type === 'string' && item.type.trim()) ? item.type.trim() : undefined,
                 comment: (item.comment && typeof item.comment === 'string' && item.comment.trim()) ? item.comment.trim() : undefined,
+                deadline: (item.deadline && typeof item.deadline === 'string' && item.deadline.trim()) ? item.deadline.trim() : undefined,
                 createdAt: item.createdAt || new Date().toISOString(),
               };
             }).filter(item => item !== null);
@@ -160,7 +162,7 @@ export const useQuickList = (user) => {
     };
   }, [user]);
 
-  const addItem = async (text, priority = 'normal', type = '', comment = '') => {
+  const addItem = async (text, priority = 'normal', type = '', comment = '', deadline = '') => {
     if (!text || !text.trim()) return;
 
     const trimmedText = text.trim();
@@ -171,9 +173,10 @@ export const useQuickList = (user) => {
       text: trimmedText,
       done: false,
       priority: priority || 'normal',
-      // Only include type/comment if they have values (will be removed by sanitize if undefined)
+      // Only include type/comment/deadline if they have values (will be removed by sanitize if undefined)
       ...(type && type.trim() ? { type: type.trim() } : {}),
       ...(comment && comment.trim() ? { comment: comment.trim() } : {}),
+      ...(deadline && deadline.trim() ? { deadline: deadline.trim() } : {}),
       createdAt: new Date().toISOString(),
     };
 
@@ -379,7 +382,7 @@ export const useQuickList = (user) => {
     }
   };
 
-  const updateItemText = async (id, text, priority, type = '', comment = '') => {
+  const updateItemText = async (id, text, priority, type = '', comment = '', deadline = '') => {
     if (!user || !id || !text || !text.trim()) return;
 
     const trimmedText = text.trim();
@@ -393,12 +396,24 @@ export const useQuickList = (user) => {
         text: trimmedText, 
         priority: priority || item.priority || 'normal',
       };
-      // Only include type/comment if they have values (sanitize will remove undefined)
+      // Only include type/comment/deadline if they have values (sanitize will remove undefined)
       if (type && type.trim()) {
         updatedItem.type = type.trim();
+      } else {
+        // Remove type if empty string is passed
+        delete updatedItem.type;
       }
       if (comment && comment.trim()) {
         updatedItem.comment = comment.trim();
+      } else {
+        // Remove comment if empty string is passed
+        delete updatedItem.comment;
+      }
+      if (deadline && deadline.trim()) {
+        updatedItem.deadline = deadline.trim();
+      } else {
+        // Remove deadline if empty string is passed
+        delete updatedItem.deadline;
       }
       return updatedItem;
     });

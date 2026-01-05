@@ -23,6 +23,7 @@ const GanttTimeline = lazy(() => import('./components/gantt/GanttTimeline').then
 const Dashboard = lazy(() => import('./components/dashboard/Dashboard').then(module => ({ default: module.Dashboard })));
 const QuickListView = lazy(() => import('./components/views/QuickListView').then(module => ({ default: module.QuickListView })));
 const SplitView = lazy(() => import('./components/views/SplitView').then(module => ({ default: module.SplitView })));
+const TermsView = lazy(() => import('./components/views/TermsView').then(module => ({ default: module.TermsView })));
 
 // Modal Components - Lazy loaded (only loaded when modals are opened)
 const TaskModal = lazy(() => import('./components/modals/TaskModal').then(module => ({ default: module.TaskModal })));
@@ -768,6 +769,17 @@ export default function App() {
                 onOpenTrash={() => {
                   setIsQuickListTrashOpen(true);
                 }}
+              />
+            </Suspense>
+          ) : currentView === 'terms' ? (
+            <Suspense fallback={
+              <div className="flex items-center justify-center h-full">
+                <div className="text-gray-500 dark:text-gray-400">{t('loading')}...</div>
+              </div>
+            }>
+              <TermsView
+                t={t}
+                lang={lang}
               />
             </Suspense>
           ) : null}

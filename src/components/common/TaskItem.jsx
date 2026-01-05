@@ -256,20 +256,20 @@ export const TaskItem = memo(({
               )}
               
               {/* Status Dropdown */}
-              <div onClick={(e) => e.stopPropagation()} className="relative">
+            <div onClick={(e) => e.stopPropagation()} className="relative">
                 {(() => {
                   // Use display status (may be 'Försenad' if overdue)
                   const { status: displayStatus } = getTaskDisplayStatus(task);
                   return (
-                    <select
+              <select
                       value={displayStatus}
-                      onChange={(e) => onQuickStatusChange(e, task.id)}
-                      className={`text-[9px] py-0.5 pl-1 pr-0 rounded-sm border-2 cursor-pointer appearance-none outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-indigo-500 ${
+                onChange={(e) => onQuickStatusChange(e, task.id)}
+                className={`text-[9px] py-0.5 pl-1 pr-0 rounded-sm border-2 cursor-pointer appearance-none outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-indigo-500 ${
                         displayStatus === 'Försenad' ? 'border-red-500' : 'border-gray-300'
-                      }`}
-                      style={{ maxWidth: '70px' }}
-                      aria-label={`Change status for ${task.title}`}
-                    >
+                }`}
+                style={{ maxWidth: '70px' }}
+                aria-label={`Change status for ${task.title}`}
+              >
                       {displayStatus === 'Försenad' ? (
                         <>
                           <option value="Försenad">{t('statusLate')}</option>
@@ -277,15 +277,15 @@ export const TaskItem = memo(({
                           <option value="Pågående">{t('statusProg')}</option>
                           <option value="Klar">{t('statusDone')}</option>
                         </>
-                      ) : (
-                        <>
-                          <option value="Planerad">{t('statusPlan')}</option>
-                          <option value="Pågående">{t('statusProg')}</option>
-                          <option value="Klar">{t('statusDone')}</option>
-                          <option value="Försenad">{t('statusLate')}</option>
-                        </>
-                      )}
-                    </select>
+                ) : (
+                  <>
+                    <option value="Planerad">{t('statusPlan')}</option>
+                    <option value="Pågående">{t('statusProg')}</option>
+                    <option value="Klar">{t('statusDone')}</option>
+                    <option value="Försenad">{t('statusLate')}</option>
+                  </>
+                )}
+              </select>
                   );
                 })()}
               </div>

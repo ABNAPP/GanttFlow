@@ -9,7 +9,8 @@ import {
   Trash2, 
   Settings,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  FileText
 } from 'lucide-react';
 
 export const NavigationSidebar = memo(({
@@ -27,6 +28,7 @@ export const NavigationSidebar = memo(({
     { id: 'gantt', icon: Calendar, label: t('gantt') },
     { id: 'tasks', icon: CheckSquare, label: t('tasks') },
     { id: 'quicklist', icon: Zap, label: t('quickList') },
+    { id: 'terms', icon: FileText, label: t('terms') },
   ];
 
   const secondaryItems = [

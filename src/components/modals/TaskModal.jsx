@@ -411,7 +411,7 @@ export const TaskModal = memo(({
                 <option value="Klar">{t('statusDone')}</option>
                 {/* Show 'Försenad' as display-only option when task is overdue */}
                 {formData.status === 'Försenad' && (
-                  <option value="Försenad">{t('statusLate')}</option>
+                <option value="Försenad">{t('statusLate')}</option>
                 )}
               </select>
               {/* Show info text if status is 'Försenad' due to date */}
@@ -749,13 +749,13 @@ export const TaskModal = memo(({
                       </div>
                     ) : (
                       /* View Mode */
-                      <div className="flex items-start justify-between gap-2 mb-1">
-                        <div className="flex-1">
-                          <p className="text-sm text-gray-700 dark:text-gray-200">{comment.text}</p>
-                          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                            {comment.author} • {new Date(comment.createdAt).toLocaleString(lang === 'sv' ? 'sv-SE' : 'en-US')}
-                          </p>
-                        </div>
+                    <div className="flex items-start justify-between gap-2 mb-1">
+                      <div className="flex-1">
+                        <p className="text-sm text-gray-700 dark:text-gray-200">{comment.text}</p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                          {comment.author} • {new Date(comment.createdAt).toLocaleString(lang === 'sv' ? 'sv-SE' : 'en-US')}
+                        </p>
+                      </div>
                         <div className="flex gap-1 flex-shrink-0">
                           <button
                             type="button"
@@ -765,15 +765,15 @@ export const TaskModal = memo(({
                           >
                             <Edit2 size={14} />
                           </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteComment(comment.id)}
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteComment(comment.id)}
                             className="p-1 text-gray-400 hover:text-red-500 transition-colors"
-                            aria-label={t('deleteComment')}
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
+                        aria-label={t('deleteComment')}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
                       </div>
                     )}
                   </div>
