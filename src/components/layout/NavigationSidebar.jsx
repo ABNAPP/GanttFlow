@@ -3,7 +3,6 @@ import { memo } from 'react';
 import { 
   BarChart3, 
   Calendar, 
-  CheckSquare, 
   Zap, 
   Archive, 
   Trash2, 
@@ -25,8 +24,7 @@ export const NavigationSidebar = memo(({
 }) => {
   const views = [
     { id: 'dashboard', icon: BarChart3, label: t('dashboard') },
-    { id: 'gantt', icon: Calendar, label: t('gantt') },
-    { id: 'tasks', icon: CheckSquare, label: t('tasks') },
+    { id: 'gantt', icon: Calendar, label: t('tasks') },
     { id: 'quicklist', icon: Zap, label: t('quickList') },
     { id: 'terms', icon: FileText, label: t('terms') },
   ];

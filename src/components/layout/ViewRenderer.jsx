@@ -1,5 +1,5 @@
 /**
- * ViewRenderer - Handles rendering of different views (dashboard, gantt, tasks, quicklist, terms)
+ * ViewRenderer - Handles rendering of different views (dashboard, gantt, quicklist, terms)
  * Extracted from App.jsx to reduce complexity
  */
 import { Suspense, lazy } from 'react';
@@ -170,16 +170,6 @@ export const ViewRenderer = ({
           )}
         </Suspense>
       </ErrorBoundary>
-    );
-  }
-
-  if (currentView === 'tasks') {
-    return (
-      <div className="flex-1 overflow-auto bg-gray-50 dark:bg-gray-900">
-        <div className="p-4 text-center text-gray-500 dark:text-gray-400">
-          {t('tasks')} {t('view') || 'View'}
-        </div>
-      </div>
     );
   }
 

@@ -2,6 +2,7 @@ import { memo, useMemo, useRef } from 'react';
 import { X, Filter, AlertTriangle } from 'lucide-react';
 import { checkIsDone, getTimeStatus, getActiveSubtasksForMetrics } from '../../utils/helpers';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
+import { STATUSES } from '../../constants';
 
 export const WorkloadTasksModal = memo(({
   isOpen,
@@ -122,7 +123,7 @@ export const WorkloadTasksModal = memo(({
                 const displayTitle = item.title;
                 const displayStatus = item.type === 'subtask' 
                   ? (item.item.done ? t('statusDone') : (item.item.startDate || item.item.endDate ? t('statusProg') : t('statusPlan')))
-                  : (item.status || 'Planerad');
+                  : (item.status || STATUSES.PLANERAD);
                 
                 return (
                   <div

@@ -8,6 +8,7 @@ import { logger } from '../../utils/logger';
 import { TaskCommentsSection } from './TaskCommentsSection';
 import { TaskChecklistSection } from './TaskChecklistSection';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
+import { STATUSES } from '../../constants';
 
 export const TaskModal = memo(({
   isOpen,
@@ -32,7 +33,7 @@ export const TaskModal = memo(({
     other: '',
     startDate: formatDate(new Date()),
     endDate: formatDate(new Date(new Date().setDate(new Date().getDate() + 5))),
-    status: 'Planerad',
+    status: STATUSES.PLANERAD,
     checklist: [],
     tags: [],
     comments: [],
@@ -83,7 +84,7 @@ export const TaskModal = memo(({
         tags: task.tags || [],
         comments: task.comments || [],
         // Store original status separately so we can restore it if user doesn't change status
-        _originalStatus: task.status || 'Planerad', // Internal: original task.status
+        _originalStatus: task.status || STATUSES.PLANERAD, // Internal: original task.status
         _displayStatusReason: reason, // Internal: why display status differs (if dateOverdue)
       });
     } else {
@@ -103,7 +104,7 @@ export const TaskModal = memo(({
         other: '',
         startDate: formatDate(today),
         endDate: formatDate(end),
-        status: 'Planerad',
+        status: STATUSES.PLANERAD,
         checklist: [],
         tags: [],
         comments: [],
@@ -130,13 +131,13 @@ export const TaskModal = memo(({
     
     // If status is 'Försenad' (display status), restore original task.status
     // User can only save Planerad/Pågående/Klar, never 'Försenad'
-    if (dataToSave.status === 'Försenad') {
+    if (dataToSave.status === STATUSES.FORSENAD) {
       // Restore original status if user didn't manually change it
       if (dataToSave._originalStatus) {
         dataToSave.status = dataToSave._originalStatus;
       } else {
         // Fallback: if no original status, default to 'Planerad'
-        dataToSave.status = 'Planerad';
+        dataToSave.status = STATUSES.PLANERAD;
       }
     }
     
@@ -270,24 +271,24 @@ export const TaskModal = memo(({
                     status: e.target.value,
                     // If user manually changes status to something other than 'Försenad', 
                     // clear _originalStatus so the new value is saved
-                    _originalStatus: e.target.value === 'Försenad' ? prev._originalStatus : undefined,
-                    _displayStatusReason: e.target.value === 'Försenad' ? 'dateOverdue' : undefined
+                    _originalStatus: e.target.value === STATUSES.FORSENAD ? prev._originalStatus : undefined,
+                    _displayStatusReason: e.target.value === STATUSES.FORSENAD ? 'dateOverdue' : undefined
                   }));
                 }}
                 className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg px-3 py-2 text-sm outline-none"
                 aria-label={t('labelStatus')}
               >
                 {/* Always show standard statuses */}
-                <option value="Planerad">{t('statusPlan')}</option>
-                <option value="Pågående">{t('statusProg')}</option>
-                <option value="Klar">{t('statusDone')}</option>
+                <option value={STATUSES.PLANERAD}>{t('statusPlan')}</option>
+                <option value={STATUSES.PAGENDE}>{t('statusProg')}</option>
+                <option value={STATUSES.KLAR}>{t('statusDone')}</option>
                 {/* Show 'Försenad' as display-only option when task is overdue */}
-                {formData.status === 'Försenad' && (
-                <option value="Försenad">{t('statusLate')}</option>
+                {formData.status === STATUSES.FORSENAD && (
+                <option value={STATUSES.FORSENAD}>{t('statusLate')}</option>
                 )}
               </select>
               {/* Show info text if status is 'Försenad' due to date */}
-              {formData.status === 'Försenad' && formData._displayStatusReason === 'dateOverdue' && (
+              {formData.status === STATUSES.FORSENAD && formData._displayStatusReason === 'dateOverdue' && (
                 <div className="mt-1 text-xs text-amber-600 dark:text-amber-400">
                   Status visas som Försenad eftersom slutdatum har passerat.
                 </div>

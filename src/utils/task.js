@@ -1,6 +1,8 @@
 // Task-related utility functions
 // Source: src/utils/helpers.js (task-related functions)
 
+import { STATUSES } from '../constants';
+
 /**
  * Check if task status indicates it's done
  * Checks if status contains 'klar' or 'done' (case-insensitive)
@@ -36,14 +38,14 @@ export const checkIsDone = (status) => {
  *   - reason: "dateOverdue" | "stored"
  */
 export const getTaskDisplayStatus = (task, nowDate = new Date()) => {
-  if (!task) return { status: 'Planerad', reason: 'stored' };
+  if (!task) return { status: STATUSES.PLANERAD, reason: 'stored' };
   
-  const rawStatus = task.status || 'Planerad';
+  const rawStatus = task.status || STATUSES.PLANERAD;
   const normalizedStatus = rawStatus.toLowerCase();
   
   // Rule A: If task is "Klar", always return "Klar"
   if (checkIsDone(normalizedStatus)) {
-    return { status: 'Klar', reason: 'stored' };
+    return { status: STATUSES.KLAR, reason: 'stored' };
   }
   
   // Rule B: Check if task is overdue based on endDate (day-level comparison)
@@ -57,23 +59,23 @@ export const getTaskDisplayStatus = (task, nowDate = new Date()) => {
     
     // If endDate < today and task is not done => display "Försenad"
     if (end < today) {
-      return { status: 'Försenad', reason: 'dateOverdue' };
+      return { status: STATUSES.FORSENAD, reason: 'dateOverdue' };
     }
   }
   
   // Rule C: Return raw status (normalized to standard format)
   if (normalizedStatus.includes('planerad') || normalizedStatus.includes('planned')) {
-    return { status: 'Planerad', reason: 'stored' };
+    return { status: STATUSES.PLANERAD, reason: 'stored' };
   }
   if (normalizedStatus.includes('pågående') || normalizedStatus.includes('progress')) {
-    return { status: 'Pågående', reason: 'stored' };
+    return { status: STATUSES.PAGENDE, reason: 'stored' };
   }
   if (normalizedStatus.includes('försenad') || normalizedStatus.includes('delayed')) {
-    return { status: 'Försenad', reason: 'stored' };
+    return { status: STATUSES.FORSENAD, reason: 'stored' };
   }
   
   // Default fallback
-  return { status: 'Planerad', reason: 'stored' };
+  return { status: STATUSES.PLANERAD, reason: 'stored' };
 };
 
 /**
@@ -485,7 +487,7 @@ export const validateTaskForm = (formData, t) => {
   }
 
   // Status validation
-  const validStatuses = ['Planerad', 'Pågående', 'Klar', 'Försenad'];
+  const validStatuses = [STATUSES.PLANERAD, STATUSES.PAGENDE, STATUSES.KLAR, STATUSES.FORSENAD];
   if (formData.status && !validStatuses.includes(formData.status)) {
     errors.push(t('errorInvalidStatus') || 'Invalid status value');
   }

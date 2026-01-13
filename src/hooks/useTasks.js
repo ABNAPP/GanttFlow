@@ -7,6 +7,7 @@ import { logger } from '../utils/logger';
 import { createTaskStorage } from '../utils/taskStorage';
 import { validateTasks } from '../utils/validation';
 import { retryWithBackoff, shouldRetryFirebaseError } from '../utils/retry';
+import { STATUSES } from '../constants';
 
 /**
  * Custom hook for task management
@@ -571,7 +572,7 @@ export const useTasks = (user) => {
   };
 
   // Computed values for archived and deleted tasks
-  const archivedTasks = tasks.filter(t => !t.deleted && (t.status === 'Klar' || t.status === 'Done'));
+  const archivedTasks = tasks.filter(t => !t.deleted && (t.status === STATUSES.KLAR || t.status === 'Done'));
   const deletedTasks = tasks.filter(t => t.deleted);
 
   return {

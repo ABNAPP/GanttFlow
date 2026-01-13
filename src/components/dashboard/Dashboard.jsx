@@ -3,6 +3,7 @@ import { BarChart3, CheckCircle, Clock, AlertTriangle, Calendar, Filter, Users, 
 import { checkIsDone, calculateChecklistProgress, hasOverdueChecklistItems, getTimeStatus, getTaskDisplayStatus, normalizeSubtaskPriority, isActiveSubtask, getActiveSubtasksForMetrics } from '../../utils/helpers';
 import { WorkloadTasksModal } from '../modals/WorkloadTasksModal';
 import { QuickListSection } from './QuickListSection';
+import { STATUSES } from '../../constants';
 
 // normalizeSubtaskPriority and isActiveSubtask are now imported from utils/helpers
 
@@ -20,7 +21,7 @@ const DebugPanel = ({ tasks, stats, normalizeSubtaskPriority, checkIsDone, getTa
   }
 
   // Calculate status counts from tasks - use getTaskDisplayStatus (SINGLE SOURCE OF TRUTH for display)
-  const statusCounts = { Planerad: 0, Pågående: 0, Klar: 0, Försenad: 0 };
+  const statusCounts = { [STATUSES.PLANERAD]: 0, [STATUSES.PAGENDE]: 0, [STATUSES.KLAR]: 0, [STATUSES.FORSENAD]: 0 };
   tasks.forEach(t => {
     if (t.deleted) return;
     
@@ -222,7 +223,7 @@ export const Dashboard = memo(({ tasks, t, onTaskClick, warningThreshold, user, 
       
       statusCounts[displayStatus] = (statusCounts[displayStatus] || 0) + 1;
       
-      if (displayStatus === 'Klar') {
+      if (displayStatus === STATUSES.KLAR) {
         doneCount++;
       } else {
         activeCount++;
@@ -485,7 +486,7 @@ export const Dashboard = memo(({ tasks, t, onTaskClick, warningThreshold, user, 
     // Filter active tasks (not deleted, not Klar) - read status directly from task.status
     const active = tasks.filter(t => {
       if (t.deleted) return false;
-      const status = t.status || 'Planerad';
+      const status = t.status || STATUSES.PLANERAD;
       const normalizedStatus = status.toLowerCase();
       return !(normalizedStatus.includes('klar') || normalizedStatus.includes('done'));
     });
@@ -509,7 +510,7 @@ export const Dashboard = memo(({ tasks, t, onTaskClick, warningThreshold, user, 
     const overdue = tasks.filter(t => {
       if (t.deleted) return false;
       const { status: displayStatus } = getTaskDisplayStatus(t);
-      return displayStatus === 'Försenad';
+      return displayStatus === STATUSES.FORSENAD;
     });
 
     // Tasks starting this week
@@ -531,10 +532,10 @@ export const Dashboard = memo(({ tasks, t, onTaskClick, warningThreshold, user, 
     });
 
     const statusChart = [
-      { status: 'Klar', count: statusCounts['Klar'] || 0, color: '#10b981' },
-      { status: 'Pågående', count: statusCounts['Pågående'] || 0, color: '#3b82f6' },
-      { status: 'Planerad', count: statusCounts['Planerad'] || 0, color: '#9ca3af' },
-      { status: 'Försenad', count: statusCounts['Försenad'] || 0, color: '#ef4444' },
+      { status: STATUSES.KLAR, count: statusCounts[STATUSES.KLAR] || 0, color: '#10b981' },
+      { status: STATUSES.PAGENDE, count: statusCounts[STATUSES.PAGENDE] || 0, color: '#3b82f6' },
+      { status: STATUSES.PLANERAD, count: statusCounts[STATUSES.PLANERAD] || 0, color: '#9ca3af' },
+      { status: STATUSES.FORSENAD, count: statusCounts[STATUSES.FORSENAD] || 0, color: '#ef4444' },
     ].filter(item => item.count > 0);
 
     return { overdue, thisWeek, statusChart };
@@ -804,15 +805,15 @@ export const Dashboard = memo(({ tasks, t, onTaskClick, warningThreshold, user, 
               if (task.deleted) return;
               
               // Raw status
-              const rawStatus = task.status || 'Planerad';
+              const rawStatus = task.status || STATUSES.PLANERAD;
               const normalizedRaw = rawStatus.toLowerCase();
-              let rawNormalized = 'Planerad';
+              let rawNormalized = STATUSES.PLANERAD;
               if (normalizedRaw.includes('klar') || normalizedRaw.includes('done')) {
-                rawNormalized = 'Klar';
+                rawNormalized = STATUSES.KLAR;
               } else if (normalizedRaw.includes('pågående') || normalizedRaw.includes('progress')) {
-                rawNormalized = 'Pågående';
+                rawNormalized = STATUSES.PAGENDE;
               } else if (normalizedRaw.includes('försenad') || normalizedRaw.includes('delayed')) {
-                rawNormalized = 'Försenad';
+                rawNormalized = STATUSES.FORSENAD;
               }
               rawStatusCounts[rawNormalized] = (rawStatusCounts[rawNormalized] || 0) + 1;
               

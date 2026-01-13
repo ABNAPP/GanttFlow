@@ -4,6 +4,7 @@ import { Filter, X, Save, Trash2, Bell, StickyNote } from 'lucide-react';
 import { useQuickList } from '../../hooks/useQuickList';
 import { useNotes } from '../../hooks/useNotes';
 import { NotesWidget } from '../notes/NotesWidget';
+import { STATUSES } from '../../constants';
 
 export const FiltersBar = memo(({
   tasks,
@@ -38,10 +39,10 @@ export const FiltersBar = memo(({
   const uniquePhases = [...new Set(tasks.map(t => t.phase).filter(Boolean))].sort();
   const uniqueTags = [...new Set(tasks.flatMap(t => (t.tags || [])).filter(Boolean))].sort();
   const statuses = [
-    { value: 'Planerad', label: 'statusPlan' },
-    { value: 'Pågående', label: 'statusProg' },
-    { value: 'Klar', label: 'statusDone' },
-    { value: 'Försenad', label: 'statusLate' },
+    { value: STATUSES.PLANERAD, label: 'statusPlan' },
+    { value: STATUSES.PAGENDE, label: 'statusProg' },
+    { value: STATUSES.KLAR, label: 'statusDone' },
+    { value: STATUSES.FORSENAD, label: 'statusLate' },
   ];
   const roles = ['UA', 'HL', 'CAD', 'G', 'O', 'BE', 'PL', t('roleOther')];
 

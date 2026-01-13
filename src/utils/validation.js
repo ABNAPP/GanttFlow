@@ -4,6 +4,7 @@
  */
 
 import { generateId } from './helpers';
+import { STATUSES } from '../constants';
 
 /**
  * Validates and normalizes a checklist item
@@ -85,8 +86,8 @@ export const validateTask = (data, id) => {
     : [];
 
   // Validate status
-  const validStatuses = ['Planerad', 'Pågående', 'Klar', 'Försenad'];
-  const status = validStatuses.includes(data.status) ? data.status : 'Planerad';
+  const validStatuses = [STATUSES.PLANERAD, STATUSES.PAGENDE, STATUSES.KLAR, STATUSES.FORSENAD];
+  const status = validStatuses.includes(data.status) ? data.status : STATUSES.PLANERAD;
 
   // Validate comments - ensure it's always an array
   const comments = Array.isArray(data.comments)

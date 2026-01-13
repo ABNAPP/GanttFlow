@@ -35,6 +35,12 @@ export const TermsView = memo(({ t, lang }) => {
             
             <div className="space-y-4">
               <div>
+                <p className="text-gray-600 dark:text-gray-400 mb-4">
+                  {t('termsNavigationStructure') || 'Applikationen har två sidebars: NavigationSidebar (vänster) för att växla mellan vyer, och Sidebar (uppgiftslista) som visas i Gantt-vyn.'}
+                </p>
+              </div>
+
+              <div>
                 <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300 mb-2">
                   {t('termsDashboard') || 'Dashboard (NAVET)'}
                 </h3>
@@ -42,40 +48,28 @@ export const TermsView = memo(({ t, lang }) => {
                   {t('termsDashboardText') || 'Dashboard visar översiktlig statistik och analyser:'}
                 </p>
                 <ul className="list-disc list-inside text-gray-600 dark:text-gray-400 space-y-1 ml-4">
-                  <li>{t('termsDashboardItem1') || 'Prioritetsfördelning - visar antal deluppgifter per prioritet (Hög, Normal, Låg)'}</li>
-                  <li>{t('termsDashboardItem2') || 'Belastning per handläggare - visar arbetsbelastning per person'}</li>
-                  <li>{t('termsDashboardItem3') || 'Statusfördelning - visar antal uppgifter per status'}</li>
-                  <li>{t('termsDashboardItem4') || 'Fasfördelning - visar antal uppgifter per fas'}</li>
+                  <li>{t('termsDashboardItem1') || 'Statistikkort: Totalt, Aktiva, Klar, Försenade, Planerade, Pågående'}</li>
+                  <li>{t('termsDashboardItem2') || 'Prioritetsfördelning - visar antal deluppgifter per prioritet (Hög, Normal, Låg)'}</li>
+                  <li>{t('termsDashboardItem3') || 'Belastning per handläggare - visar arbetsbelastning per person (HL)'}</li>
+                  <li>{t('termsDashboardItem4') || 'Statusfördelning - visar antal uppgifter per status (diagram)'}</li>
+                  <li>{t('termsDashboardItem5') || 'Fasfördelning - visar antal uppgifter per fas'}</li>
+                  <li>{t('termsDashboardItem6') || "Dagens fokus - försenade uppgifter och uppgifter som startar denna vecka"}</li>
                 </ul>
               </div>
 
               <div>
                 <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  {t('termsGantt') || 'Gantt'}
+                  {t('termsGantt') || 'Uppgifter (Gantt)'}
                 </h3>
                 <p className="text-gray-600 dark:text-gray-400 mb-2">
-                  {t('termsGanttText') || 'Gantt-diagrammet visar uppgifter i tidslinje:'}
+                  {t('termsGanttText') || 'Uppgifter-vyn (tidigare Gantt) har tre lägen: Lista, Delad, eller Gantt. Gantt-diagrammet visar uppgifter i tidslinje:'}
                 </p>
                 <ul className="list-disc list-inside text-gray-600 dark:text-gray-400 space-y-1 ml-4">
                   <li>{t('termsGanttItem1') || 'Zoom-nivåer: Dag (40px cellbredd), Vecka (20px), Månad (10px)'}</li>
                   <li>{t('termsGanttItem2') || 'Drag-and-drop för att flytta uppgifter'}</li>
                   <li>{t('termsGanttItem3') || 'Visar varningar och försenade uppgifter'}</li>
                   <li>{t('termsGanttItem4') || 'Milstolpar visas som diamanter när startdatum = slutdatum'}</li>
-                </ul>
-              </div>
-
-              <div>
-                <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  {t('termsTasks') || 'Uppgifter'}
-                </h3>
-                <p className="text-gray-600 dark:text-gray-400 mb-2">
-                  {t('termsTasksText') || 'Task-listan visar alla uppgifter med sortering och filtrering:'}
-                </p>
-                <ul className="list-disc list-inside text-gray-600 dark:text-gray-400 space-y-1 ml-4">
-                  <li>{t('termsTasksItem1') || 'Sortering: Startdatum, Slutdatum, eller Namn'}</li>
-                  <li>{t('termsTasksItem2') || 'Gruppering per fas (Phase)'}</li>
-                  <li>{t('termsTasksItem3') || 'Expand/collapse för att visa/dölja deluppgifter'}</li>
-                  <li>{t('termsTasksItem4') || 'Varningar för deadlines'}</li>
+                  <li>{t('termsGanttItem5') || 'Vy-lägen: Lista (endast uppgiftslista), Delad (lista + Gantt), Gantt (endast Gantt)'}</li>
                 </ul>
               </div>
 
@@ -208,10 +202,16 @@ export const TermsView = memo(({ t, lang }) => {
           {/* Sidebar Section */}
           <section className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-gray-200 dark:border-gray-700">
             <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">
-              {t('termsSidebar') || 'Sidebar-funktioner'}
+              {t('termsSidebar') || 'Uppgiftslista (Sidebar)'}
             </h2>
             
             <div className="space-y-4">
+              <div>
+                <p className="text-gray-600 dark:text-gray-400 mb-4">
+                  {t('termsSidebarNote') || 'OBS: Detta avser uppgiftslistan (Sidebar) som visas i Gantt-vyn, INTE NavigationSidebar (vänster sidebar för vyval).'}
+                </p>
+              </div>
+
               <div>
                 <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300 mb-2">
                   {t('termsSorting') || 'Sortering'}

@@ -3,6 +3,7 @@ import { ChevronRight, ChevronDown, AlertTriangle, Briefcase, CheckSquare, Tag, 
 import { RoleBadge } from './RoleBadge';
 import { getTimeStatus, calculateChecklistProgress, getTaskDisplayStatus } from '../../utils/helpers';
 import { sanitizeText } from '../../utils/sanitize';
+import { STATUSES } from '../../constants';
 
 export const TaskItem = memo(({
   task,
@@ -263,24 +264,24 @@ export const TaskItem = memo(({
                       value={displayStatus}
                 onChange={(e) => onQuickStatusChange(e, task.id)}
                 className={`text-[9px] py-0.5 pl-1 pr-0 rounded-sm border-2 cursor-pointer appearance-none outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-indigo-500 ${
-                        displayStatus === 'Försenad' ? 'border-red-500' : 'border-gray-300'
+                        displayStatus === STATUSES.FORSENAD ? 'border-red-500' : 'border-gray-300'
                 }`}
                 style={{ maxWidth: '70px' }}
                 aria-label={`Change status for ${task.title}`}
               >
-                      {displayStatus === 'Försenad' ? (
+                      {displayStatus === STATUSES.FORSENAD ? (
                         <>
-                          <option value="Försenad">{t('statusLate')}</option>
-                          <option value="Planerad">{t('statusPlan')}</option>
-                          <option value="Pågående">{t('statusProg')}</option>
-                          <option value="Klar">{t('statusDone')}</option>
+                          <option value={STATUSES.FORSENAD}>{t('statusLate')}</option>
+                          <option value={STATUSES.PLANERAD}>{t('statusPlan')}</option>
+                          <option value={STATUSES.PAGENDE}>{t('statusProg')}</option>
+                          <option value={STATUSES.KLAR}>{t('statusDone')}</option>
                         </>
                 ) : (
                   <>
-                    <option value="Planerad">{t('statusPlan')}</option>
-                    <option value="Pågående">{t('statusProg')}</option>
-                    <option value="Klar">{t('statusDone')}</option>
-                    <option value="Försenad">{t('statusLate')}</option>
+                    <option value={STATUSES.PLANERAD}>{t('statusPlan')}</option>
+                    <option value={STATUSES.PAGENDE}>{t('statusProg')}</option>
+                    <option value={STATUSES.KLAR}>{t('statusDone')}</option>
+                    <option value={STATUSES.FORSENAD}>{t('statusLate')}</option>
                   </>
                 )}
               </select>

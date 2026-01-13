@@ -11,6 +11,7 @@ import { validateTasks, validateTask } from './validation';
 import { logger } from './logger';
 import { showError, showSuccess } from './toast';
 import { retryWithBackoff, shouldRetryFirebaseError } from './retry';
+import { STATUSES } from '../constants';
 
 /**
  * Helper function to normalize comments to always be an array
@@ -303,7 +304,7 @@ export class LocalStorageTaskStorage extends BaseTaskStorage {
 
       // Change status from "Slutförd" back to "Pågående"
       const updatedTasks = currentTasks.map(t =>
-        t.id === taskId ? { ...t, status: 'Pågående' } : t
+        t.id === taskId ? { ...t, status: STATUSES.PAGENDE } : t
       );
 
       localStorage.setItem(this.storageKey, JSON.stringify(updatedTasks));
@@ -546,7 +547,7 @@ export class FirestoreTaskStorage extends BaseTaskStorage {
       logger.logWithPrefix('FirestoreTaskStorage', 'Restoring task status in Firebase:', taskId);
       await retryWithBackoff(
         () => updateDoc(getTaskDoc(this.user.uid, taskId), {
-          status: 'Pågående',
+          status: STATUSES.PAGENDE,
         }),
         {
           retries: 3,

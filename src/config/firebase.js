@@ -3,29 +3,21 @@ import { getAnalytics, isSupported } from 'firebase/analytics';
 import { getAuth } from 'firebase/auth';
 import { getFirestore, collection, doc } from 'firebase/firestore';
 import { logger } from '../utils/logger';
+import { getFirebaseConfig, getMissingFirebaseFields, isLocalDev } from './app';
 
 // Firebase Configuration
-// In production, requires environment variables. In development, uses fallback values.
-const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || (import.meta.env.PROD ? undefined : "AIzaSyBge71BrBafsNQM_bCOoANoTmaWgNQMwWQ"),
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || (import.meta.env.PROD ? undefined : "project-management-dcd11.firebaseapp.com"),
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || (import.meta.env.PROD ? undefined : "project-management-dcd11"),
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || (import.meta.env.PROD ? undefined : "project-management-dcd11.firebasestorage.app"),
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || (import.meta.env.PROD ? undefined : "421714252326"),
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || (import.meta.env.PROD ? undefined : "1:421714252326:web:05c34fb17286f7c8d84ce7"),
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || (import.meta.env.PROD ? undefined : "G-LMJV91QG88")
-};
+// Now using centralized config from app.js
+const firebaseConfig = getFirebaseConfig();
 
 // Validate Firebase config - but don't throw, just warn
 // This allows the app to continue running in demo mode if Firebase isn't configured
-const requiredFields = ['apiKey', 'authDomain', 'projectId', 'storageBucket', 'messagingSenderId', 'appId'];
-const missingFields = requiredFields.filter(field => !firebaseConfig[field]);
+const missingFields = getMissingFirebaseFields();
 
 if (missingFields.length > 0) {
   const errorMessage = `Firebase configuration missing required environment variables: ${missingFields.join(', ')}. ` +
     `Please set VITE_FIREBASE_${missingFields.map(f => f.toUpperCase().replace(/([A-Z])/g, '_$1').slice(1)).join(', VITE_FIREBASE_')} in your environment.`;
   
-  if (import.meta.env.PROD) {
+  if (config.env.isProd) {
     // In production, log error but don't throw - allow app to show error message
     logger.error('[Firebase Config]', errorMessage);
     logger.warn('[Firebase Config]', 'App will run in limited mode. Some features may not work.');
@@ -36,28 +28,13 @@ if (missingFields.length > 0) {
   }
 }
 
-// Helper to check if we're in local development
-export const isLocalDev = () => {
-  // CRITICAL: In production (Vercel), import.meta.env.PROD should be true
-  // Always return false if we're in production
-  if (import.meta.env.PROD === true) {
-    return false; // Always false in production
-  }
-  // Use Vite's built-in env vars
-  if (import.meta.env.DEV !== undefined) {
-    return import.meta.env.DEV;
-  }
-  // Fallback to hostname check (only if PROD is not true)
-  if (typeof window !== 'undefined') {
-    const hostname = window.location.hostname;
-    return hostname === 'localhost' || hostname === '127.0.0.1' || hostname.includes('localhost');
-  }
-  return false;
-};
+// Re-export isLocalDev from app.js for backward compatibility
+export { isLocalDev };
 
 // Log which config source is being used (only in development)
-if (import.meta.env.DEV) {
-  if (import.meta.env.VITE_FIREBASE_API_KEY) {
+import { config } from './app';
+if (config.env.isDev) {
+  if (config.firebase.apiKey && config.firebase.apiKey !== "AIzaSyBge71BrBafsNQM_bCOoANoTmaWgNQMwWQ") {
     logger.logWithPrefix('Firebase', 'Using environment variables (VITE_FIREBASE_*)');
   } else {
     logger.logWithPrefix('Firebase', 'Using hardcoded config (env vars not set)');
@@ -91,13 +68,13 @@ try {
   if (existingApps.length > 0) {
     // Reuse existing app if it exists
     app = existingApps[0];
-    if (import.meta.env.DEV) {
+    if (config.env.isDev) {
       logger.logWithPrefix('Firebase', 'Reusing existing Firebase app');
     }
   } else {
     // Initialize new app with our config
     app = initializeApp(firebaseConfig);
-    if (import.meta.env.DEV) {
+    if (config.env.isDev) {
       logger.logWithPrefix('Firebase', '✅ Initialized with apiKey:', firebaseConfig.apiKey?.substring(0, 10) + '...');
     }
   }
@@ -106,7 +83,7 @@ try {
   db = getFirestore(app);
   
   // Log environment info (only in development)
-  if (import.meta.env.DEV) {
+  if (config.env.isDev) {
     const isDev = isLocalDev();
     logger.logWithPrefix('Firebase', `${isDev ? 'LOCAL DEV' : 'PRODUCTION'} - Auth and Firestore initialized`);
   }
@@ -117,15 +94,15 @@ try {
       if (supported && firebaseConfig.measurementId) {
         try {
           analytics = getAnalytics(app);
-          if (import.meta.env.DEV) {
+          if (config.env.isDev) {
             logger.logWithPrefix('Firebase', 'Analytics initialized');
           }
         } catch (error) {
-          if (import.meta.env.DEV) {
+          if (config.env.isDev) {
             logger.warn('Analytics initialization failed:', error);
           }
         }
-      } else if (import.meta.env.DEV) {
+      } else if (config.env.isDev) {
         logger.logWithPrefix('Firebase', 'Analytics not supported or measurementId not provided');
       }
     });
@@ -137,7 +114,7 @@ try {
   logger.warn('[Firebase] App will run in limited mode. Firebase features will not be available.');
   
   // In development, show more details
-  if (import.meta.env.DEV) {
+  if (config.env.isDev) {
     logger.warn('[Firebase] To fix: Set environment variables or use demo mode (localhost only)');
   }
 }
@@ -166,8 +143,9 @@ export const isDemoModeAllowed = () => {
   return isLocalDev();
 };
 
-export const appId = import.meta.env.VITE_APP_ID ||
-  (typeof window !== 'undefined' && window.__app_id ? window.__app_id : 'default-app-id');
+// Get appId from centralized config
+import { getAppConfig } from './app';
+export const appId = getAppConfig().id;
 
 // Helper for Firestore paths
 export const getTasksCollection = (uid) =>

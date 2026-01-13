@@ -1,5 +1,8 @@
 // Date utility functions
 // Source: src/utils/helpers.js (date-related functions)
+// Now using date-fns for consistent date handling
+
+import { format, parseISO, addDays, eachDayOfInterval, getDate, getMonth, getDay } from 'date-fns';
 
 /**
  * Format date to YYYY-MM-DD string
@@ -13,7 +16,25 @@
  * formatDate('2024-01-15T10:30:00Z') // Returns "2024-01-15"
  */
 export const formatDate = (date) => {
-  return new Date(date).toISOString().split('T')[0];
+  let dateObj;
+  if (date instanceof Date) {
+    dateObj = date;
+  } else if (typeof date === 'string') {
+    // Try to parse ISO string, fallback to new Date if it fails
+    try {
+      dateObj = parseISO(date);
+      // If parseISO returns invalid date, use new Date
+      if (isNaN(dateObj.getTime())) {
+        dateObj = new Date(date);
+      }
+    } catch {
+      dateObj = new Date(date);
+    }
+  } else {
+    // For numbers or other types, use new Date
+    dateObj = new Date(date);
+  }
+  return format(dateObj, 'yyyy-MM-dd');
 };
 
 /**
@@ -29,14 +50,39 @@ export const formatDate = (date) => {
  * // Returns [Date(2024-01-01), Date(2024-01-02), Date(2024-01-03)]
  */
 export const getDaysArray = (start, end) => {
-  const arr = [];
-  const dt = new Date(start);
-  const endDate = new Date(end);
-  while (dt <= endDate) {
-    arr.push(new Date(dt));
-    dt.setDate(dt.getDate() + 1);
+  let startDate, endDate;
+  
+  if (start instanceof Date) {
+    startDate = start;
+  } else if (typeof start === 'string') {
+    try {
+      startDate = parseISO(start);
+      if (isNaN(startDate.getTime())) {
+        startDate = new Date(start);
+      }
+    } catch {
+      startDate = new Date(start);
+    }
+  } else {
+    startDate = new Date(start);
   }
-  return arr;
+  
+  if (end instanceof Date) {
+    endDate = end;
+  } else if (typeof end === 'string') {
+    try {
+      endDate = parseISO(end);
+      if (isNaN(endDate.getTime())) {
+        endDate = new Date(end);
+      }
+    } catch {
+      endDate = new Date(end);
+    }
+  } else {
+    endDate = new Date(end);
+  }
+  
+  return eachDayOfInterval({ start: startDate, end: endDate });
 };
 
 /**
@@ -52,8 +98,24 @@ export const getDaysArray = (start, end) => {
  * getHolidayName(new Date(2024, 0, 2), 'sv') // Returns null
  */
 export const getHolidayName = (date, lang) => {
-  const d = date.getDate();
-  const m = date.getMonth() + 1;
+  let dateObj;
+  if (date instanceof Date) {
+    dateObj = date;
+  } else if (typeof date === 'string') {
+    try {
+      dateObj = parseISO(date);
+      if (isNaN(dateObj.getTime())) {
+        dateObj = new Date(date);
+      }
+    } catch {
+      dateObj = new Date(date);
+    }
+  } else {
+    dateObj = new Date(date);
+  }
+  
+  const d = getDate(dateObj);
+  const m = getMonth(dateObj) + 1; // getMonth returns 0-11, so add 1
   if (m === 1 && d === 1)
     return lang === 'sv' ? 'Nyårsdagen' : "New Year's Day";
   if (m === 1 && d === 6)
@@ -86,6 +148,22 @@ export const getHolidayName = (date, lang) => {
  * isRedDay(new Date(2024, 0, 2)) // Returns false (weekday)
  */
 export const isRedDay = (date) => {
-  const day = date.getDay();
-  return day === 0 || day === 6 || getHolidayName(date, 'sv') !== null;
+  let dateObj;
+  if (date instanceof Date) {
+    dateObj = date;
+  } else if (typeof date === 'string') {
+    try {
+      dateObj = parseISO(date);
+      if (isNaN(dateObj.getTime())) {
+        dateObj = new Date(date);
+      }
+    } catch {
+      dateObj = new Date(date);
+    }
+  } else {
+    dateObj = new Date(date);
+  }
+  
+  const day = getDay(dateObj); // 0 = Sunday, 6 = Saturday
+  return day === 0 || day === 6 || getHolidayName(dateObj, 'sv') !== null;
 };

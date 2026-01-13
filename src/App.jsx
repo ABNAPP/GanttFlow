@@ -89,7 +89,7 @@ export default function App() {
   const [isQuickListOpen, setIsQuickListOpen] = useState(false);
   const [isQuickListArchiveOpen, setIsQuickListArchiveOpen] = useState(false);
   const [isQuickListTrashOpen, setIsQuickListTrashOpen] = useState(false);
-  // Current view: 'dashboard', 'gantt', 'tasks', 'quicklist'
+  // Current view: 'dashboard', 'gantt', 'quicklist', 'terms'
   const [currentView, setCurrentView] = useState(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('gantt-current-view');
@@ -97,7 +97,7 @@ export default function App() {
     }
     return 'dashboard';
   });
-  // View mode for Gantt/Tasks: 'list', 'gantt', 'split'
+  // View mode for Uppgifter (formerly Gantt): 'list', 'gantt', 'split'
   const [ganttViewMode, setGanttViewMode] = useState(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('gantt-view-mode');

@@ -74,28 +74,6 @@ export const AppLayout = ({
         t={t}
       />
 
-      {/* Tasks Sidebar (only shown in 'tasks' view) */}
-      {currentView === 'tasks' && (
-        <Sidebar
-          isOpen={isSidebarOpen}
-          tasks={processedTasks}
-          loading={authLoading || loading}
-          searchTerm={searchTerm}
-          onlyMyTasks={onlyMyTasks}
-          sortOption={sortOption}
-          expandedTaskIds={expandedTaskIds}
-          warningThreshold={warningThreshold}
-          onToggleExpand={onToggleExpand}
-          onEdit={onTaskClick}
-          onQuickStatusChange={onQuickStatusChange}
-          onChecklistToggle={onChecklistToggle}
-          onSearchChange={onSearchChange}
-          onOnlyMyTasksToggle={onOnlyMyTasksToggle}
-          onSortChange={onSortChange}
-          t={t}
-        />
-      )}
-
       {/* Main Content Area */}
       <ViewRenderer
         currentView={currentView}
