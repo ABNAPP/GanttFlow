@@ -286,6 +286,13 @@ export const TRANSLATIONS = {
     quickListItemDeleted: 'Uppgift flyttad till papperskorg',
     quickListItemRestored: 'Uppgift återställd',
     quickListItemPermanentlyDeleted: 'Uppgift raderad permanent',
+    // Notes
+    notes: 'Anteckningar',
+    notesPlaceholder: 'Lägg till anteckning...',
+    notesEmpty: 'Inga anteckningar',
+    addNote: 'Lägg till',
+    deleteNote: 'Ta bort',
+    editNote: 'Redigera',
     // Dashboard Focus
     todaysFocus: 'Dagens Fokus',
     overdueTasks: 'Försenade uppgifter',
@@ -681,6 +688,13 @@ export const TRANSLATIONS = {
     quickListItemDeleted: 'Item moved to trash',
     quickListItemRestored: 'Item restored',
     quickListItemPermanentlyDeleted: 'Item permanently deleted',
+    // Notes
+    notes: 'Notes',
+    notesPlaceholder: 'Add note...',
+    notesEmpty: 'No notes',
+    addNote: 'Add',
+    deleteNote: 'Delete',
+    editNote: 'Edit',
     // Dashboard Focus
     todaysFocus: 'Today\'s Focus',
     overdueTasks: 'Overdue Tasks',

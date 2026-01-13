@@ -1,7 +1,9 @@
 // FiltersBar component for advanced filtering
 import { memo, useState } from 'react';
-import { Filter, X, Save, Trash2, Bell } from 'lucide-react';
+import { Filter, X, Save, Trash2, Bell, StickyNote } from 'lucide-react';
 import { useQuickList } from '../../hooks/useQuickList';
+import { useNotes } from '../../hooks/useNotes';
+import { NotesWidget } from '../notes/NotesWidget';
 
 export const FiltersBar = memo(({
   tasks,
@@ -21,9 +23,15 @@ export const FiltersBar = memo(({
   // Get quick list items to show count
   const { items: quickListItems } = useQuickList(user);
   const activeQuickListCount = quickListItems.filter(item => !item.done).length;
+  
+  // Get notes to show count
+  const { notes } = useNotes(user);
+  const notesCount = notes.length;
+  
   const [showFilters, setShowFilters] = useState(false);
   const [showSaveView, setShowSaveView] = useState(false);
   const [viewName, setViewName] = useState('');
+  const [notesOpen, setNotesOpen] = useState(false);
 
   // Get unique values for dropdowns
   const uniqueClients = [...new Set(tasks.map(t => t.client).filter(Boolean))].sort();
@@ -137,6 +145,33 @@ export const FiltersBar = memo(({
               </div>
               <span className="hidden sm:inline">{t('quickList')}</span>
             </button>
+          )}
+
+          {/* Notes Button */}
+          {user && (
+            <div className="relative">
+              <button
+                onClick={() => setNotesOpen(!notesOpen)}
+                className="flex items-center gap-1 px-2 py-1.5 text-xs text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 border border-gray-200 dark:border-gray-600 rounded relative"
+                title={t('notes')}
+              >
+                <div className="relative">
+                  <StickyNote size={14} />
+                  {notesCount > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-1">
+                      {notesCount > 99 ? '99+' : notesCount}
+                    </span>
+                  )}
+                </div>
+                <span className="hidden sm:inline">{t('notes')}</span>
+              </button>
+              <NotesWidget
+                user={user}
+                t={t}
+                isOpen={notesOpen}
+                onClose={() => setNotesOpen(false)}
+              />
+            </div>
           )}
         </div>
 

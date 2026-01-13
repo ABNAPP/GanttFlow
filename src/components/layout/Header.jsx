@@ -129,7 +129,7 @@ export const Header = memo(({
               title={t('theme')}
               aria-label="Toggle theme"
             >
-              {darkMode ? <Sun size={16} /> : <Moon size={16} />}
+              {darkMode ? <Moon size={16} /> : <Sun size={16} />}
             </button>
           </div>
 
@@ -351,7 +351,7 @@ export const Header = memo(({
                 title={t('theme')}
                 aria-label="Toggle theme"
               >
-                {darkMode ? <Sun size={16} /> : <Moon size={16} />}
+                {darkMode ? <Moon size={16} /> : <Sun size={16} />}
               </button>
             </div>
 
