@@ -16,16 +16,23 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || (import.meta.env.PROD ? undefined : "G-LMJV91QG88")
 };
 
-// Validate Firebase config in production
-if (import.meta.env.PROD) {
-  const requiredFields = ['apiKey', 'authDomain', 'projectId', 'storageBucket', 'messagingSenderId', 'appId'];
-  const missingFields = requiredFields.filter(field => !firebaseConfig[field]);
+// Validate Firebase config - but don't throw, just warn
+// This allows the app to continue running in demo mode if Firebase isn't configured
+const requiredFields = ['apiKey', 'authDomain', 'projectId', 'storageBucket', 'messagingSenderId', 'appId'];
+const missingFields = requiredFields.filter(field => !firebaseConfig[field]);
+
+if (missingFields.length > 0) {
+  const errorMessage = `Firebase configuration missing required environment variables: ${missingFields.join(', ')}. ` +
+    `Please set VITE_FIREBASE_${missingFields.map(f => f.toUpperCase().replace(/([A-Z])/g, '_$1').slice(1)).join(', VITE_FIREBASE_')} in your environment.`;
   
-  if (missingFields.length > 0) {
-    throw new Error(
-      `Firebase configuration missing required environment variables: ${missingFields.join(', ')}. ` +
-      `Please set VITE_FIREBASE_${missingFields.map(f => f.toUpperCase()).join(', VITE_FIREBASE_')} in your production environment.`
-    );
+  if (import.meta.env.PROD) {
+    // In production, log error but don't throw - allow app to show error message
+    logger.error('[Firebase Config]', errorMessage);
+    logger.warn('[Firebase Config]', 'App will run in limited mode. Some features may not work.');
+  } else {
+    // In development, just warn
+    logger.warn('[Firebase Config]', errorMessage);
+    logger.warn('[Firebase Config]', 'Using fallback values for development.');
   }
 }
 
@@ -64,9 +71,21 @@ if (import.meta.env.DEV) {
 }
 
 // Initialize Firebase - ensure we only initialize once
-let app, auth, db, analytics;
+// Use null as default to indicate initialization failure
+let app = null;
+let auth = null;
+let db = null;
+let analytics = null;
+let firebaseError = null;
 
 try {
+  // Check if we have minimum required config
+  const hasMinimumConfig = firebaseConfig.apiKey && firebaseConfig.projectId;
+  
+  if (!hasMinimumConfig) {
+    throw new Error('Firebase configuration is incomplete. Missing required fields.');
+  }
+
   const existingApps = getApps();
   
   if (existingApps.length > 0) {
@@ -79,7 +98,7 @@ try {
     // Initialize new app with our config
     app = initializeApp(firebaseConfig);
     if (import.meta.env.DEV) {
-      logger.logWithPrefix('Firebase', '✅ Initialized with apiKey:', firebaseConfig.apiKey.substring(0, 10) + '...');
+      logger.logWithPrefix('Firebase', '✅ Initialized with apiKey:', firebaseConfig.apiKey?.substring(0, 10) + '...');
     }
   }
   
@@ -112,12 +131,35 @@ try {
     });
   }
 } catch (error) {
-  // Only log error - don't try to re-initialize or use fallback config
-  console.error('[Firebase] Error initializing Firebase:', error);
-  throw error; // Re-throw to make the error visible
+  // Store error but don't throw - allow app to continue
+  firebaseError = error;
+  logger.error('[Firebase] Error initializing Firebase:', error);
+  logger.warn('[Firebase] App will run in limited mode. Firebase features will not be available.');
+  
+  // In development, show more details
+  if (import.meta.env.DEV) {
+    logger.warn('[Firebase] To fix: Set environment variables or use demo mode (localhost only)');
+  }
 }
 
-export { app, auth, db, analytics };
+// Export Firebase instances and error state
+export { app, auth, db, analytics, firebaseError };
+
+// Helper to check if Firebase is initialized
+export const isFirebaseInitialized = () => {
+  return app !== null && auth !== null && db !== null;
+};
+
+// Helper to get Firebase error message
+export const getFirebaseErrorMessage = () => {
+  if (!firebaseError) return null;
+  
+  if (missingFields && missingFields.length > 0) {
+    return `Firebase configuration missing: ${missingFields.join(', ')}. Please set environment variables.`;
+  }
+  
+  return firebaseError.message || 'Firebase initialization failed.';
+};
 
 // Helper to check if demo mode is allowed (only in local dev)
 export const isDemoModeAllowed = () => {

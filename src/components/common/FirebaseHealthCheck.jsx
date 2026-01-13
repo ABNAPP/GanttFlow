@@ -25,7 +25,7 @@ export const FirebaseHealthCheck = ({ enabled = true, onStatusChange }) => {
       
       // Check 1: Verify app is initialized
       if (!app) {
-        const error = 'Firebase app is not initialized';
+        const error = 'Firebase app is not initialized. Check Firebase configuration.';
         console.error('[Firebase Health Check] ❌', error);
         setStatus({
           initialized: false,

@@ -26,9 +26,10 @@ import { exportToCSV } from './utils/export';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { ErrorDisplay } from './components/common/ErrorDisplay';
 import { FirebaseHealthCheck } from './components/common/FirebaseHealthCheck';
+import { FirebaseConfigError } from './components/common/FirebaseConfigError';
 import { DemoModeWarning } from './components/common/DemoModeWarning';
 import { AuthScreen } from './components/common/AuthScreen';
-import { isLocalDev } from './config/firebase';
+import { isLocalDev, isFirebaseInitialized } from './config/firebase';
 import { logger } from './utils/logger';
 
 // Initialize toast on load
@@ -523,8 +524,11 @@ export default function App() {
 
   return (
     <ErrorBoundary t={t}>
+      {/* Firebase Configuration Error - shows if Firebase is not initialized */}
+      <FirebaseConfigError t={t} />
+      
       {/* Firebase Health Check - runs diagnostic on mount */}
-      <FirebaseHealthCheck 
+      <FirebaseHealthCheck
         enabled={true}
         onStatusChange={(connected, error) => {
           if (connected) {
