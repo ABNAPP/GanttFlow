@@ -3,6 +3,7 @@ import { memo, useState, useEffect, Suspense } from 'react';
 import { PanelGroup, Panel, PanelResizeHandle } from 'react-resizable-panels';
 import { Sidebar } from '../layout/Sidebar';
 import { GanttTimeline } from '../gantt/GanttTimeline';
+import { ErrorBoundary } from '../common/ErrorBoundary';
 
 export const SplitView = memo(({
   tasks,
@@ -77,28 +78,30 @@ export const SplitView = memo(({
 
       {/* Right Panel - Gantt */}
       <Panel defaultSize={60} minSize={40} maxSize={70} className="flex flex-col overflow-hidden">
-        <Suspense fallback={
-          <div className="flex items-center justify-center h-full">
-            <div className="text-gray-500 dark:text-gray-400">{t('loading')}...</div>
-          </div>
-        }>
-          <GanttTimeline
-            tasks={processedTasks}
-            viewStart={viewStart}
-            viewDays={viewDays}
-            zoomLevel={zoomLevel}
-            warningThreshold={warningThreshold}
-            showChecklistInGantt={showChecklistInGantt}
-            dragState={dragState}
-            dragMovedRef={dragMovedRef}
-            onDragStart={onDragStart}
-            onTaskClick={handleTaskClick}
-            onScrollTimeline={onScrollTimeline}
-            selectedTaskId={selectedTaskId}
-            t={t}
-            lang={lang}
-          />
-        </Suspense>
+        <ErrorBoundary t={t}>
+          <Suspense fallback={
+            <div className="flex items-center justify-center h-full">
+              <div className="text-gray-500 dark:text-gray-400">{t('loading')}...</div>
+            </div>
+          }>
+            <GanttTimeline
+              tasks={processedTasks}
+              viewStart={viewStart}
+              viewDays={viewDays}
+              zoomLevel={zoomLevel}
+              warningThreshold={warningThreshold}
+              showChecklistInGantt={showChecklistInGantt}
+              dragState={dragState}
+              dragMovedRef={dragMovedRef}
+              onDragStart={onDragStart}
+              onTaskClick={handleTaskClick}
+              onScrollTimeline={onScrollTimeline}
+              selectedTaskId={selectedTaskId}
+              t={t}
+              lang={lang}
+            />
+          </Suspense>
+        </ErrorBoundary>
       </Panel>
     </PanelGroup>
   );

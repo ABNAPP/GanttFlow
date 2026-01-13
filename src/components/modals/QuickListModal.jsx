@@ -1,8 +1,14 @@
-import { memo } from 'react';
+import { memo, useRef } from 'react';
 import { X, Archive, Trash2 } from 'lucide-react';
 import { QuickList } from '../common/QuickList';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 export const QuickListModal = memo(({ isOpen, onClose, user, t, onOpenArchive, onOpenTrash }) => {
+  const modalRef = useRef(null);
+
+  // Focus trap for keyboard navigation
+  useFocusTrap(isOpen, modalRef);
+
   if (!isOpen) return null;
 
   return (
@@ -14,6 +20,7 @@ export const QuickListModal = memo(({ isOpen, onClose, user, t, onOpenArchive, o
       aria-labelledby="quicklist-modal-title"
     >
       <div
+        ref={modalRef}
         className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-[95vw] md:max-w-3xl max-h-[90vh] md:max-h-[85vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200 border border-gray-200 dark:border-gray-700 flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >

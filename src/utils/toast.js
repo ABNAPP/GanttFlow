@@ -1,6 +1,11 @@
 // Simple toast notification system
 let toastContainer = null;
 
+/**
+ * Initializes the toast notification container
+ * Creates a fixed container element in the DOM if it doesn't exist
+ * @returns {void}
+ */
 export const initToast = () => {
   if (typeof document !== 'undefined' && !toastContainer) {
     toastContainer = document.createElement('div');
@@ -10,6 +15,19 @@ export const initToast = () => {
   }
 };
 
+/**
+ * Shows a toast notification
+ * Creates and displays a temporary notification message with auto-dismiss
+ * 
+ * @param {string} message - Message to display
+ * @param {'success'|'error'|'warning'|'info'} type - Toast type (default: 'info')
+ * @param {number} duration - Display duration in milliseconds (default: 3000)
+ * @returns {void}
+ * 
+ * @example
+ * showToast('Task saved successfully', 'success', 2000);
+ * showToast('Error occurred', 'error');
+ */
 export const showToast = (message, type = 'info', duration = 3000) => {
   initToast();
   
@@ -63,9 +81,32 @@ export const showToast = (message, type = 'info', duration = 3000) => {
   }, duration);
 };
 
+/**
+ * Shows an error toast notification
+ * @param {string} message - Error message to display
+ * @returns {void}
+ */
 export const showError = (message) => showToast(message, 'error');
+
+/**
+ * Shows a success toast notification
+ * @param {string} message - Success message to display
+ * @returns {void}
+ */
 export const showSuccess = (message) => showToast(message, 'success');
+
+/**
+ * Shows a warning toast notification
+ * @param {string} message - Warning message to display
+ * @returns {void}
+ */
 export const showWarning = (message) => showToast(message, 'warning');
+
+/**
+ * Shows an info toast notification
+ * @param {string} message - Info message to display
+ * @returns {void}
+ */
 export const showInfo = (message) => showToast(message, 'info');
 
 

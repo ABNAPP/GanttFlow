@@ -3,15 +3,30 @@
 
 /**
  * Format date to YYYY-MM-DD string
- * Source: src/utils/helpers.js - formatDate
+ * Converts a Date object or date string to ISO date format (YYYY-MM-DD)
+ * 
+ * @param {Date|string|number} date - Date to format
+ * @returns {string} Formatted date string in YYYY-MM-DD format
+ * 
+ * @example
+ * formatDate(new Date(2024, 0, 15)) // Returns "2024-01-15"
+ * formatDate('2024-01-15T10:30:00Z') // Returns "2024-01-15"
  */
 export const formatDate = (date) => {
   return new Date(date).toISOString().split('T')[0];
 };
 
 /**
- * Get array of days between two dates
- * Source: src/utils/helpers.js - getDaysArray
+ * Get array of days between two dates (inclusive)
+ * Creates an array of Date objects for each day from start to end
+ * 
+ * @param {Date|string} start - Start date
+ * @param {Date|string} end - End date
+ * @returns {Date[]} Array of Date objects for each day
+ * 
+ * @example
+ * getDaysArray('2024-01-01', '2024-01-03')
+ * // Returns [Date(2024-01-01), Date(2024-01-02), Date(2024-01-03)]
  */
 export const getDaysArray = (start, end) => {
   const arr = [];
@@ -25,8 +40,16 @@ export const getDaysArray = (start, end) => {
 };
 
 /**
- * Get holiday name for a date
- * Source: src/utils/helpers.js - getHolidayName
+ * Get holiday name for a date (Swedish holidays)
+ * Returns the name of a Swedish holiday if the date matches, otherwise null
+ * 
+ * @param {Date} date - Date to check
+ * @param {string} lang - Language code ('sv' for Swedish, 'en' for English)
+ * @returns {string|null} Holiday name or null if not a holiday
+ * 
+ * @example
+ * getHolidayName(new Date(2024, 0, 1), 'sv') // Returns "Nyårsdagen"
+ * getHolidayName(new Date(2024, 0, 2), 'sv') // Returns null
  */
 export const getHolidayName = (date, lang) => {
   const d = date.getDate();
@@ -51,8 +74,16 @@ export const getHolidayName = (date, lang) => {
 };
 
 /**
- * Check if date is a red day (weekend or holiday)
- * Source: src/utils/helpers.js - isRedDay
+ * Check if date is a red day (weekend or Swedish holiday)
+ * Red days are weekends (Saturday/Sunday) or Swedish holidays
+ * 
+ * @param {Date} date - Date to check
+ * @returns {boolean} True if date is a weekend or holiday
+ * 
+ * @example
+ * isRedDay(new Date(2024, 0, 1)) // Returns true (New Year's Day)
+ * isRedDay(new Date(2024, 0, 6)) // Returns true (Saturday)
+ * isRedDay(new Date(2024, 0, 2)) // Returns false (weekday)
  */
 export const isRedDay = (date) => {
   const day = date.getDay();

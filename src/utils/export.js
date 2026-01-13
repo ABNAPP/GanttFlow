@@ -2,9 +2,16 @@
 // CSV export for tasks
 
 /**
- * Export tasks to CSV format
- * @param {Array} tasks - Array of task objects
- * @param {Function} t - Translation function
+ * Exports tasks to CSV format and triggers download
+ * Creates a CSV file with task data including client, title, phase, status, roles, dates, and tags
+ * 
+ * @param {Array<Task>} tasks - Array of task objects to export
+ * @param {Function} t - Translation function for localized headers
+ * @returns {void}
+ * 
+ * @example
+ * const { tasks } = useTasks(user);
+ * exportToCSV(tasks, t); // Downloads 'gantt_tasks_2024-01-15.csv'
  */
 export const exportToCSV = (tasks, t) => {
   if (!tasks || tasks.length === 0) {

@@ -1,5 +1,6 @@
-import { memo } from 'react';
+import { memo, useRef } from 'react';
 import { X, BarChart3, Filter } from 'lucide-react';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 
 export const StatsModal = memo(({
   isOpen,
@@ -9,6 +10,11 @@ export const StatsModal = memo(({
   onStatsRoleChange,
   t,
 }) => {
+  const modalRef = useRef(null);
+
+  // Focus trap for keyboard navigation
+  useFocusTrap(isOpen, modalRef);
+
   if (!isOpen) return null;
 
   return (
@@ -20,6 +26,7 @@ export const StatsModal = memo(({
       aria-labelledby="stats-title"
     >
       <div
+        ref={modalRef}
         className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-sm overflow-hidden border border-gray-200 dark:border-gray-700"
         onClick={(e) => e.stopPropagation()}
       >

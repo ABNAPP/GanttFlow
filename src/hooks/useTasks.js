@@ -6,7 +6,45 @@ import { showError, showSuccess } from '../utils/toast';
 import { logger } from '../utils/logger';
 import { createTaskStorage } from '../utils/taskStorage';
 import { validateTasks } from '../utils/validation';
+import { retryWithBackoff, shouldRetryFirebaseError } from '../utils/retry';
 
+/**
+ * Custom hook for task management
+ * Handles CRUD operations for tasks, backups, and data import/export
+ * Supports both Firebase (production) and localStorage (demo mode)
+ * 
+ * @param {Object|null} user - Current authenticated user (Firebase User object) or null
+ * @returns {Object} Tasks hook return object
+ * @property {Array<Task>} tasks - Array of all active tasks
+ * @property {Array<Task>} archivedTasks - Array of completed tasks (status: 'Klar' or 'Done')
+ * @property {Array<Task>} deletedTasks - Array of soft-deleted tasks (deleted: true)
+ * @property {boolean} loading - Loading state
+ * @property {Error|null} error - Error state
+ * @property {Function} retry - Retry failed operation
+ * @property {Function} addTask - Create new task
+ * @property {Function} updateTask - Update existing task
+ * @property {Function} deleteTask - Soft delete task (move to trash)
+ * @property {Function} permanentDeleteTask - Permanently delete task
+ * @property {Function} restoreTask - Restore task from trash
+ * @property {Function} restoreTaskStatus - Restore task from archive
+ * @property {Array} cloudBackups - Array of cloud backup objects
+ * @property {boolean} loadingBackups - Backups loading state
+ * @property {Function} fetchCloudBackups - Fetch cloud backups
+ * @property {Function} createCloudBackup - Create new cloud backup
+ * @property {Function} restoreCloudBackup - Restore from cloud backup
+ * @property {Function} exportData - Export tasks to JSON file
+ * @property {Function} importData - Import tasks from JSON file
+ * 
+ * @example
+ * const { user } = useAuth();
+ * const { tasks, loading, addTask, updateTask } = useTasks(user);
+ * 
+ * // Create new task
+ * await addTask({ title: 'New Task', startDate: '2024-01-01', endDate: '2024-01-05' });
+ * 
+ * // Update task
+ * await updateTask(taskId, { status: 'Pågående' });
+ */
 export const useTasks = (user) => {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -84,7 +122,15 @@ export const useTasks = (user) => {
           try {
             // Check if Firestore is empty before attempting migration
             const q = getTasksCollection(user.uid);
-            const initialSnapshot = await getDocs(q);
+            const initialSnapshot = await retryWithBackoff(
+              () => getDocs(q),
+              {
+                retries: 2,
+                baseDelay: 500,
+                shouldRetry: shouldRetryFirebaseError,
+                testMode: import.meta.env.MODE === 'test',
+              }
+            );
             if (initialSnapshot.docs.length === 0) {
               // Firestore is empty, check for localStorage data
               const stored = localStorage.getItem('demo-tasks');
@@ -96,7 +142,15 @@ export const useTasks = (user) => {
                   const migrationPromises = validatedTasks.map(async (task) => {
                     try {
                       const taskRef = getTaskDoc(user.uid, task.id);
-                      await setDoc(taskRef, task);
+                      await retryWithBackoff(
+                        () => setDoc(taskRef, task),
+                        {
+                          retries: 2,
+                          baseDelay: 500,
+                          shouldRetry: shouldRetryFirebaseError,
+                          testMode: import.meta.env.MODE === 'test',
+                        }
+                      );
                       return true;
                     } catch (error) {
                       logger.error(`[Migration] Error migrating task ${task.id}:`, error);
@@ -124,7 +178,12 @@ export const useTasks = (user) => {
     }
   }, [user, taskStorage]);
 
-  // Add task using TaskStorage
+  /**
+   * Adds a new task to the system
+   * @param {Partial<Task>} taskData - Task data to create (must include title, startDate, endDate)
+   * @returns {Promise<string>} The ID of the created task
+   * @throws {Error} If user is not authenticated or task creation fails
+   */
   const addTask = async (taskData) => {
     logger.logWithPrefix('addTask', 'called with:', { user: user?.uid, taskData });
     
@@ -165,7 +224,13 @@ export const useTasks = (user) => {
     }
   };
 
-  // Update task using TaskStorage
+  /**
+   * Updates an existing task
+   * @param {string} taskId - ID of the task to update
+   * @param {Partial<Task>} taskData - Partial task data to update
+   * @returns {Promise<void>}
+   * @throws {Error} If user is not authenticated or task update fails
+   */
   const updateTask = async (taskId, taskData) => {
     if (!user || !taskStorage) {
       showError('You must be logged in to update tasks');
@@ -189,7 +254,13 @@ export const useTasks = (user) => {
     }
   };
 
-  // Delete task (soft delete) using TaskStorage
+  /**
+   * Soft deletes a task (moves to trash)
+   * Task can be restored using restoreTask()
+   * @param {string} taskId - ID of the task to delete
+   * @returns {Promise<void>}
+   * @throws {Error} If user is not authenticated or task deletion fails
+   */
   const deleteTask = async (taskId) => {
     if (!user || !taskStorage) {
       showError('You must be logged in to delete tasks');
@@ -214,7 +285,12 @@ export const useTasks = (user) => {
     }
   };
 
-  // Permanently delete task using TaskStorage
+  /**
+   * Permanently deletes a task (cannot be restored)
+   * @param {string} taskId - ID of the task to permanently delete
+   * @returns {Promise<void>}
+   * @throws {Error} If user is not authenticated or deletion fails
+   */
   const permanentDeleteTask = async (taskId) => {
     if (!user || !taskStorage) {
       showError('You must be logged in to delete tasks');
@@ -240,7 +316,12 @@ export const useTasks = (user) => {
     }
   };
 
-  // Restore task from trash using TaskStorage
+  /**
+   * Restores a task from trash (undoes soft delete)
+   * @param {string} taskId - ID of the task to restore
+   * @returns {Promise<void>}
+   * @throws {Error} If user is not authenticated or restore fails
+   */
   const restoreTask = async (taskId) => {
     if (!user || !taskStorage) {
       showError('You must be logged in to restore tasks');
@@ -268,7 +349,12 @@ export const useTasks = (user) => {
     }
   };
 
-  // Restore task status (from archive) using TaskStorage
+  /**
+   * Restores a task from archive (changes status from 'Klar' back to 'Pågående')
+   * @param {string} taskId - ID of the task to restore
+   * @returns {Promise<void>}
+   * @throws {Error} If user is not authenticated or restore fails
+   */
   const restoreTaskStatus = async (taskId) => {
     if (!user || !taskStorage) {
       showError('You must be logged in to restore tasks');
@@ -296,13 +382,25 @@ export const useTasks = (user) => {
     }
   };
 
-  // Fetch cloud backups
+  /**
+   * Fetches cloud backups for the current user
+   * @returns {Promise<void>}
+   * @throws {Error} If user is not authenticated or fetch fails
+   */
   const fetchCloudBackups = async () => {
     if (!user) return;
     setLoadingBackups(true);
     try {
       const q = getBackupsCollection(user.uid);
-      const snapshot = await getDocs(q);
+      const snapshot = await retryWithBackoff(
+        () => getDocs(q),
+        {
+          retries: 3,
+          baseDelay: 1000,
+          shouldRetry: shouldRetryFirebaseError,
+          testMode: import.meta.env.MODE === 'test',
+        }
+      );
       let backups = snapshot.docs.map((d) => ({
         id: d.id,
         ...d.data(),
@@ -322,7 +420,11 @@ export const useTasks = (user) => {
     setLoadingBackups(false);
   };
 
-  // Create cloud backup
+  /**
+   * Creates a new cloud backup of all current tasks
+   * @returns {Promise<void>}
+   * @throws {Error} If user is not authenticated or backup creation fails
+   */
   const createCloudBackup = async () => {
     if (!user) return;
     try {
@@ -331,7 +433,15 @@ export const useTasks = (user) => {
         taskCount: tasks.length,
         tasks: JSON.stringify(tasks),
       };
-      await addDoc(getBackupsCollection(user.uid), backupData);
+      await retryWithBackoff(
+        () => addDoc(getBackupsCollection(user.uid), backupData),
+        {
+          retries: 3,
+          baseDelay: 1000,
+          shouldRetry: shouldRetryFirebaseError,
+          testMode: import.meta.env.MODE === 'test',
+        }
+      );
       showSuccess('Backup saved to cloud!');
       fetchCloudBackups();
     } catch (err) {
@@ -340,7 +450,14 @@ export const useTasks = (user) => {
     }
   };
 
-  // Restore from cloud backup
+  /**
+   * Restores tasks from a cloud backup
+   * Existing tasks will be updated, new tasks will be added
+   * @param {Object} backup - Backup object containing tasks data
+   * @param {string} backup.tasks - JSON string of tasks array
+   * @returns {Promise<void>}
+   * @throws {Error} If user is not authenticated or restore fails
+   */
   const restoreCloudBackup = async (backup) => {
     if (!user || !backup.tasks) return;
     if (!window.confirm('Vill du importera uppgifter? Befintliga uppgifter uppdateras.')) return;
@@ -374,9 +491,25 @@ export const useTasks = (user) => {
         }
 
         if (id) {
-          await setDoc(getTaskDoc(user.uid, id), taskData, { merge: true });
+          await retryWithBackoff(
+            () => setDoc(getTaskDoc(user.uid, id), taskData, { merge: true }),
+            {
+              retries: 3,
+              baseDelay: 1000,
+              shouldRetry: shouldRetryFirebaseError,
+              testMode: import.meta.env.MODE === 'test',
+            }
+          );
         } else {
-          await addDoc(getTasksCollection(user.uid), taskData);
+          await retryWithBackoff(
+            () => addDoc(getTasksCollection(user.uid), taskData),
+            {
+              retries: 3,
+              baseDelay: 1000,
+              shouldRetry: shouldRetryFirebaseError,
+              testMode: import.meta.env.MODE === 'test',
+            }
+          );
         }
       }
       showSuccess('Import completed!');
@@ -387,7 +520,11 @@ export const useTasks = (user) => {
     }
   };
 
-  // Export data
+  /**
+   * Exports all tasks to a JSON file
+   * Downloads a file named 'gantt_backup_YYYY-MM-DD.json'
+   * @returns {void}
+   */
   const exportData = () => {
     const dataStr = JSON.stringify(tasks, null, 2);
     const blob = new Blob([dataStr], { type: 'application/json' });
@@ -402,7 +539,13 @@ export const useTasks = (user) => {
     showSuccess('Data exported successfully');
   };
 
-  // Import data
+  /**
+   * Imports tasks from a JSON file
+   * Existing tasks will be updated, new tasks will be added
+   * @param {File} file - JSON file containing tasks array
+   * @returns {Promise<void>}
+   * @throws {Error} If file is invalid, user is not authenticated, or import fails
+   */
   const importData = async (file) => {
     if (!file || !user) return;
     

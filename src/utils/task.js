@@ -3,7 +3,15 @@
 
 /**
  * Check if task status indicates it's done
- * Source: src/utils/helpers.js - checkIsDone
+ * Checks if status contains 'klar' or 'done' (case-insensitive)
+ * 
+ * @param {string} status - Task status string
+ * @returns {boolean} True if status indicates task is completed
+ * 
+ * @example
+ * checkIsDone('Klar') // Returns true
+ * checkIsDone('Done') // Returns true
+ * checkIsDone('Pågående') // Returns false
  */
 export const checkIsDone = (status) => {
   const s = (status || '').toLowerCase();
@@ -364,7 +372,13 @@ export const calculateChecklistProgress = (checklist) => {
 
 /**
  * Generate unique ID
- * Source: src/utils/helpers.js - generateId
+ * Creates a unique identifier using timestamp, random string, and performance.now()
+ * Format: {timestamp}-{random}-{performance}
+ * 
+ * @returns {string} Unique identifier string
+ * 
+ * @example
+ * generateId() // Returns "1704067200000-abc123def-1234.567"
  */
 export const generateId = () => {
   return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}-${performance.now()}`;

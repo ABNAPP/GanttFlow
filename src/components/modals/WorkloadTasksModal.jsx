@@ -1,6 +1,7 @@
-import { memo, useMemo } from 'react';
+import { memo, useMemo, useRef } from 'react';
 import { X, Filter, AlertTriangle } from 'lucide-react';
 import { checkIsDone, getTimeStatus, getActiveSubtasksForMetrics } from '../../utils/helpers';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 export const WorkloadTasksModal = memo(({
   isOpen,
@@ -77,6 +78,11 @@ export const WorkloadTasksModal = memo(({
       });
   }, [tasks, role, roleLabel, t]);
 
+  const modalRef = useRef(null);
+
+  // Focus trap for keyboard navigation
+  useFocusTrap(isOpen, modalRef);
+
   if (!isOpen) return null;
 
   return (
@@ -88,6 +94,7 @@ export const WorkloadTasksModal = memo(({
       aria-labelledby="workload-tasks-title"
     >
       <div
+        ref={modalRef}
         className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-[95vw] sm:max-w-2xl overflow-hidden border border-gray-200 dark:border-gray-700 max-h-[80vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >

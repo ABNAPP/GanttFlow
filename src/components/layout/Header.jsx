@@ -137,8 +137,14 @@ export const Header = memo(({
           {!isDashboardOpen && onGanttViewModeChange && (
             <div className="hidden md:flex bg-gray-100 dark:bg-gray-700 p-1 rounded-lg border border-gray-200 dark:border-gray-600 flex-shrink-0">
               <button
-                onClick={() => onGanttViewModeChange('list')}
-                className={`p-1.5 rounded-md ${
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (onGanttViewModeChange) {
+                    onGanttViewModeChange('list');
+                  }
+                }}
+                className={`p-1.5 rounded-md transition-colors ${
                   ganttViewMode === 'list'
                     ? 'bg-white dark:bg-gray-600 shadow-sm text-indigo-600 dark:text-indigo-400'
                     : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
@@ -146,12 +152,19 @@ export const Header = memo(({
                 title={t('viewList') || 'Lista'}
                 aria-label={t('viewList') || 'Lista'}
                 aria-pressed={ganttViewMode === 'list'}
+                type="button"
               >
                 <List size={14} />
               </button>
               <button
-                onClick={() => onGanttViewModeChange('split')}
-                className={`p-1.5 rounded-md ${
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (onGanttViewModeChange) {
+                    onGanttViewModeChange('split');
+                  }
+                }}
+                className={`p-1.5 rounded-md transition-colors ${
                   ganttViewMode === 'split'
                     ? 'bg-white dark:bg-gray-600 shadow-sm text-indigo-600 dark:text-indigo-400'
                     : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
@@ -159,12 +172,19 @@ export const Header = memo(({
                 title={t('viewSplit') || 'Delad'}
                 aria-label={t('viewSplit') || 'Delad'}
                 aria-pressed={ganttViewMode === 'split'}
+                type="button"
               >
                 <Split size={14} />
               </button>
               <button
-                onClick={() => onGanttViewModeChange('gantt')}
-                className={`p-1.5 rounded-md ${
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (onGanttViewModeChange) {
+                    onGanttViewModeChange('gantt');
+                  }
+                }}
+                className={`p-1.5 rounded-md transition-colors ${
                   ganttViewMode === 'gantt'
                     ? 'bg-white dark:bg-gray-600 shadow-sm text-indigo-600 dark:text-indigo-400'
                     : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
@@ -172,6 +192,7 @@ export const Header = memo(({
                 title={t('viewGantt') || 'Gantt'}
                 aria-label={t('viewGantt') || 'Gantt'}
                 aria-pressed={ganttViewMode === 'gantt'}
+                type="button"
               >
                 <Layout size={14} />
               </button>
@@ -181,38 +202,59 @@ export const Header = memo(({
           {/* Desktop: Zoom Controls */}
           <div className="hidden md:flex bg-gray-100 dark:bg-gray-700 p-1 rounded-lg border border-gray-200 dark:border-gray-600 flex-shrink-0">
             <button
-              onClick={() => onZoomChange('day')}
-              className={`p-1.5 rounded-md ${
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (onZoomChange) {
+                  onZoomChange('day');
+                }
+              }}
+              className={`p-1.5 rounded-md transition-colors ${
                 zoomLevel === 'day'
                   ? 'bg-white dark:bg-gray-600 shadow-sm text-indigo-600 dark:text-indigo-400'
                   : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
               }`}
               aria-label={t('dayView')}
               aria-pressed={zoomLevel === 'day'}
+              type="button"
             >
               <ZoomIn size={14} />
             </button>
             <button
-              onClick={() => onZoomChange('week')}
-              className={`p-1.5 rounded-md ${
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (onZoomChange) {
+                  onZoomChange('week');
+                }
+              }}
+              className={`p-1.5 rounded-md transition-colors ${
                 zoomLevel === 'week'
                   ? 'bg-white dark:bg-gray-600 shadow-sm text-indigo-600 dark:text-indigo-400'
                   : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
               }`}
               aria-label={t('weekView')}
               aria-pressed={zoomLevel === 'week'}
+              type="button"
             >
               <Calendar size={14} />
             </button>
             <button
-              onClick={() => onZoomChange('month')}
-              className={`p-1.5 rounded-md ${
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (onZoomChange) {
+                  onZoomChange('month');
+                }
+              }}
+              className={`p-1.5 rounded-md transition-colors ${
                 zoomLevel === 'month'
                   ? 'bg-white dark:bg-gray-600 shadow-sm text-indigo-600 dark:text-indigo-400'
                   : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
               }`}
               aria-label={t('monthView')}
               aria-pressed={zoomLevel === 'month'}
+              type="button"
             >
               <ZoomOut size={14} />
             </button>
@@ -357,35 +399,56 @@ export const Header = memo(({
 
             <div className="flex bg-gray-100 dark:bg-gray-700 p-1 rounded-lg border border-gray-200 dark:border-gray-600">
               <button
-                onClick={() => onZoomChange('day')}
-                className={`p-1.5 rounded-md ${
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (onZoomChange) {
+                    onZoomChange('day');
+                  }
+                }}
+                className={`p-1.5 rounded-md transition-colors ${
                   zoomLevel === 'day'
                     ? 'bg-white dark:bg-gray-600 shadow-sm text-indigo-600 dark:text-indigo-400'
                     : 'text-gray-500 dark:text-gray-400'
                 }`}
                 aria-label={t('dayView')}
+                type="button"
               >
                 <ZoomIn size={14} />
               </button>
               <button
-                onClick={() => onZoomChange('week')}
-                className={`p-1.5 rounded-md ${
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (onZoomChange) {
+                    onZoomChange('week');
+                  }
+                }}
+                className={`p-1.5 rounded-md transition-colors ${
                   zoomLevel === 'week'
                     ? 'bg-white dark:bg-gray-600 shadow-sm text-indigo-600 dark:text-indigo-400'
                     : 'text-gray-500 dark:text-gray-400'
                 }`}
                 aria-label={t('weekView')}
+                type="button"
               >
                 <Calendar size={14} />
               </button>
               <button
-                onClick={() => onZoomChange('month')}
-                className={`p-1.5 rounded-md ${
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (onZoomChange) {
+                    onZoomChange('month');
+                  }
+                }}
+                className={`p-1.5 rounded-md transition-colors ${
                   zoomLevel === 'month'
                     ? 'bg-white dark:bg-gray-600 shadow-sm text-indigo-600 dark:text-indigo-400'
                     : 'text-gray-500 dark:text-gray-400'
                 }`}
                 aria-label={t('monthView')}
+                type="button"
               >
                 <ZoomOut size={14} />
               </button>

@@ -10,6 +10,7 @@ import { generateId } from './helpers';
 import { validateTasks, validateTask } from './validation';
 import { logger } from './logger';
 import { showError, showSuccess } from './toast';
+import { retryWithBackoff, shouldRetryFirebaseError } from './retry';
 
 /**
  * Helper function to normalize comments to always be an array
@@ -424,7 +425,15 @@ export class FirestoreTaskStorage extends BaseTaskStorage {
       };
 
       logger.logWithPrefix('FirestoreTaskStorage', 'Adding task to Firebase:', { userId: this.user.uid, taskData: normalizedTaskData });
-      const docRef = await addDoc(getTasksCollection(this.user.uid), normalizedTaskData);
+      const docRef = await retryWithBackoff(
+        () => addDoc(getTasksCollection(this.user.uid), normalizedTaskData),
+        {
+          retries: 3,
+          baseDelay: 1000,
+          shouldRetry: shouldRetryFirebaseError,
+          testMode: import.meta.env.MODE === 'test',
+        }
+      );
       logger.logWithPrefix('FirestoreTaskStorage', 'Task added successfully with ID:', docRef.id);
       return docRef.id;
     } catch (error) {
@@ -458,7 +467,15 @@ export class FirestoreTaskStorage extends BaseTaskStorage {
         }));
       }
 
-      await updateDoc(getTaskDoc(this.user.uid, taskId), taskData);
+      await retryWithBackoff(
+        () => updateDoc(getTaskDoc(this.user.uid, taskId), taskData),
+        {
+          retries: 3,
+          baseDelay: 1000,
+          shouldRetry: shouldRetryFirebaseError,
+          testMode: import.meta.env.MODE === 'test',
+        }
+      );
     } catch (error) {
       logger.error('Error updating task:', error);
       throw error;
@@ -467,10 +484,18 @@ export class FirestoreTaskStorage extends BaseTaskStorage {
 
   async deleteTask(taskId) {
     try {
-      await updateDoc(getTaskDoc(this.user.uid, taskId), {
-        deleted: true,
-        deletedAt: new Date().toISOString(),
-      });
+      await retryWithBackoff(
+        () => updateDoc(getTaskDoc(this.user.uid, taskId), {
+          deleted: true,
+          deletedAt: new Date().toISOString(),
+        }),
+        {
+          retries: 3,
+          baseDelay: 1000,
+          shouldRetry: shouldRetryFirebaseError,
+          testMode: import.meta.env.MODE === 'test',
+        }
+      );
     } catch (error) {
       logger.error('Error deleting task:', error);
       throw error;
@@ -479,7 +504,15 @@ export class FirestoreTaskStorage extends BaseTaskStorage {
 
   async permanentDeleteTask(taskId) {
     try {
-      await deleteDoc(getTaskDoc(this.user.uid, taskId));
+      await retryWithBackoff(
+        () => deleteDoc(getTaskDoc(this.user.uid, taskId)),
+        {
+          retries: 3,
+          baseDelay: 1000,
+          shouldRetry: shouldRetryFirebaseError,
+          testMode: import.meta.env.MODE === 'test',
+        }
+      );
     } catch (error) {
       logger.error('Error permanently deleting task:', error);
       throw error;
@@ -489,10 +522,18 @@ export class FirestoreTaskStorage extends BaseTaskStorage {
   async restoreTask(taskId) {
     try {
       logger.logWithPrefix('FirestoreTaskStorage', 'Restoring task in Firebase:', taskId);
-      await updateDoc(getTaskDoc(this.user.uid, taskId), {
-        deleted: false,
-        deletedAt: null,
-      });
+      await retryWithBackoff(
+        () => updateDoc(getTaskDoc(this.user.uid, taskId), {
+          deleted: false,
+          deletedAt: null,
+        }),
+        {
+          retries: 3,
+          baseDelay: 1000,
+          shouldRetry: shouldRetryFirebaseError,
+          testMode: import.meta.env.MODE === 'test',
+        }
+      );
       logger.logWithPrefix('FirestoreTaskStorage', 'Task restored successfully in Firebase:', taskId);
     } catch (error) {
       logger.error('Error restoring task:', error);
@@ -503,9 +544,17 @@ export class FirestoreTaskStorage extends BaseTaskStorage {
   async restoreTaskStatus(taskId) {
     try {
       logger.logWithPrefix('FirestoreTaskStorage', 'Restoring task status in Firebase:', taskId);
-      await updateDoc(getTaskDoc(this.user.uid, taskId), {
-        status: 'Pågående',
-      });
+      await retryWithBackoff(
+        () => updateDoc(getTaskDoc(this.user.uid, taskId), {
+          status: 'Pågående',
+        }),
+        {
+          retries: 3,
+          baseDelay: 1000,
+          shouldRetry: shouldRetryFirebaseError,
+          testMode: import.meta.env.MODE === 'test',
+        }
+      );
       logger.logWithPrefix('FirestoreTaskStorage', 'Task status restored successfully in Firebase:', taskId);
     } catch (error) {
       logger.error('Error restoring task status:', error);
@@ -516,8 +565,20 @@ export class FirestoreTaskStorage extends BaseTaskStorage {
 
 /**
  * Factory function to create the appropriate task storage instance
- * @param {Object} user - The current user
+ * Automatically selects localStorage (demo mode) or Firestore (production) based on user
+ * 
+ * @param {Object} user - The current user (Firebase User object)
  * @returns {BaseTaskStorage} - The appropriate storage instance
+ *   - LocalStorageTaskStorage if user.uid starts with 'demo-user-'
+ *   - FirestoreTaskStorage otherwise
+ * @throws {Error} If demo mode is attempted in production
+ * 
+ * @example
+ * const user = { uid: 'demo-user-123' };
+ * const storage = createTaskStorage(user); // Returns LocalStorageTaskStorage
+ * 
+ * const user = { uid: 'firebase-user-456' };
+ * const storage = createTaskStorage(user); // Returns FirestoreTaskStorage
  */
 export const createTaskStorage = (user) => {
   if (user?.uid?.startsWith('demo-user-')) {

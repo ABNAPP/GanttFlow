@@ -62,20 +62,20 @@ Kontrollera att `dist/` mappen skapas utan fel.
    - **Output Directory:** `dist` (auto-detected)
    - **Install Command:** `npm install` (auto-detected)
 
-4. **Lägg till Environment Variables**
+4. **Lägg till Environment Variables** ⚠️ **VIKTIGT!**
    - Klicka på "Environment Variables"
-   - Lägg till följande variabler:
+   - Lägg till följande variabler med dessa EXAKTA värden:
      ```
-     VITE_FIREBASE_API_KEY
-     VITE_FIREBASE_AUTH_DOMAIN
-     VITE_FIREBASE_PROJECT_ID
-     VITE_FIREBASE_STORAGE_BUCKET
-     VITE_FIREBASE_MESSAGING_SENDER_ID
-     VITE_FIREBASE_APP_ID
-     VITE_APP_ID (valfritt)
+     VITE_FIREBASE_API_KEY=AIzaSyBge71BrBafsNQM_bCOoANoTmaWgNQMwWQ
+     VITE_FIREBASE_AUTH_DOMAIN=project-management-dcd11.firebaseapp.com
+     VITE_FIREBASE_PROJECT_ID=project-management-dcd11
+     VITE_FIREBASE_STORAGE_BUCKET=project-management-dcd11.firebasestorage.app
+     VITE_FIREBASE_MESSAGING_SENDER_ID=421714252326
+     VITE_FIREBASE_APP_ID=1:421714252326:web:05c34fb17286f7c8d84ce7
      ```
-   - Fyll i värdena från din Firebase-konfiguration
-   - Välj miljöer: Production, Preview, Development
+   - **Välj miljöer:** ✅ Production, ✅ Preview, ✅ Development
+   - **OBS:** Utan dessa variabler kommer appen visa felet "Firebase auth is not initialized"
+   - Se [VERCEL_SETUP.md](./VERCEL_SETUP.md) för detaljerade instruktioner
 
 5. **Deploya**
    - Klicka på "Deploy"
@@ -165,11 +165,22 @@ Vercel deployar automatiskt när du pushar till Git:
 - Verifiera att `package.json` har korrekt build script
 - Kolla build logs i Vercel Dashboard
 
-### Firebase fungerar inte
+### Firebase fungerar inte / "Firebase auth is not initialized"
 
-- Verifiera att alla environment variables är korrekt konfigurerade
-- Kontrollera att Firebase-projektet tillåter din Vercel-domän
-- Verifiera Security Rules i Firebase Console
+**Detta är det vanligaste problemet!**
+
+1. **Kontrollera Environment Variables i Vercel:**
+   - Gå till Settings → Environment Variables
+   - Verifiera att ALLA 6 variabler är satta (se ovan)
+   - Kontrollera att de är aktiverade för **Production**-miljön
+   - Se [VERCEL_SETUP.md](./VERCEL_SETUP.md) för detaljerade instruktioner
+
+2. **Redeploy efter att ha lagt till variabler:**
+   - Variabler laddas bara vid ny deployment
+   - Gå till Deployments → Klicka på tre punkter → Redeploy
+
+3. **Verifiera att Firebase-projektet tillåter din Vercel-domän**
+4. **Verifiera Security Rules i Firebase Console**
 
 ### Routing fungerar inte
 

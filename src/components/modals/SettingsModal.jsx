@@ -1,6 +1,7 @@
-import { useEffect, memo } from 'react';
+import { useEffect, memo, useRef } from 'react';
 import { X, Settings, Database, Save, Cloud, Download, Upload } from 'lucide-react';
 import { showSuccess } from '../../utils/toast';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 export const SettingsModal = memo(({
   isOpen,
@@ -17,6 +18,11 @@ export const SettingsModal = memo(({
   onImportClick,
   t,
 }) => {
+  const modalRef = useRef(null);
+
+  // Focus trap for keyboard navigation
+  useFocusTrap(isOpen, modalRef);
+
   if (!isOpen) return null;
 
   return (
@@ -28,6 +34,7 @@ export const SettingsModal = memo(({
       aria-labelledby="settings-title"
     >
       <div
+        ref={modalRef}
         className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-[95vw] sm:max-w-lg overflow-hidden border border-gray-200 dark:border-gray-700 animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >

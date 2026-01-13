@@ -4,6 +4,7 @@
  */
 import { Suspense, lazy } from 'react';
 import { SkeletonLoader } from '../common/SkeletonLoader';
+import { ErrorBoundary } from '../common/ErrorBoundary';
 
 // Lazy loaded views
 const Dashboard = lazy(() => import('../dashboard/Dashboard').then(module => ({ default: module.Dashboard })));
@@ -78,23 +79,26 @@ export const ViewRenderer = ({
   if (currentView === 'dashboard') {
     return (
       <div className="flex-1 overflow-auto bg-gray-50 dark:bg-gray-900">
-        <Suspense fallback={<LoadingFallback t={t} variant="dashboard" />}>
-          <Dashboard 
-            tasks={tasks} 
-            t={t} 
-            onTaskClick={onTaskClick}
-            warningThreshold={warningThreshold}
-          />
-        </Suspense>
+        <ErrorBoundary t={t}>
+          <Suspense fallback={<LoadingFallback t={t} variant="dashboard" />}>
+            <Dashboard 
+              tasks={tasks} 
+              t={t} 
+              onTaskClick={onTaskClick}
+              warningThreshold={warningThreshold}
+            />
+          </Suspense>
+        </ErrorBoundary>
       </div>
     );
   }
 
   if (currentView === 'gantt') {
     return (
-      <Suspense fallback={<LoadingFallback t={t} />}>
-        {ganttViewMode === 'split' ? (
-          <SplitView
+      <ErrorBoundary t={t}>
+        <Suspense fallback={<LoadingFallback t={t} />}>
+          {ganttViewMode === 'split' ? (
+            <SplitView
             tasks={tasks}
             processedTasks={processedTasks}
             loading={authLoading || loading}
@@ -163,8 +167,9 @@ export const ViewRenderer = ({
             t={t}
             lang={lang}
           />
-        )}
-      </Suspense>
+          )}
+        </Suspense>
+      </ErrorBoundary>
     );
   }
 

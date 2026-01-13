@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { memo } from 'react';
 import { X, Trash2, Check, XCircle, Plus } from 'lucide-react';
 import { formatDate, validateTaskForm, getTaskDisplayStatus } from '../../utils/helpers';
@@ -7,6 +7,7 @@ import { validateAndSanitizeInput } from '../../utils/sanitize';
 import { logger } from '../../utils/logger';
 import { TaskCommentsSection } from './TaskCommentsSection';
 import { TaskChecklistSection } from './TaskChecklistSection';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 export const TaskModal = memo(({
   isOpen,
@@ -39,6 +40,10 @@ export const TaskModal = memo(({
   const [newTag, setNewTag] = useState('');
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [validationErrors, setValidationErrors] = useState([]);
+  const modalRef = useRef(null);
+
+  // Focus trap for keyboard navigation
+  useFocusTrap(isOpen, modalRef);
 
   // Initialize form data when task changes
   useEffect(() => {
@@ -192,6 +197,7 @@ export const TaskModal = memo(({
       aria-labelledby="modal-title"
     >
       <div
+        ref={modalRef}
         className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-[95vw] sm:max-w-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 border border-gray-200 dark:border-gray-700"
         onClick={(e) => e.stopPropagation()}
       >

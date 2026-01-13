@@ -9,6 +9,23 @@ import {
 import { auth, isLocalDev } from '../config/firebase';
 import { logger } from '../utils/logger';
 
+/**
+ * Custom hook for authentication management
+ * Handles user authentication state, registration, login, and logout
+ * 
+ * @returns {Object} Auth hook return object
+ * @property {Object|null} user - Current authenticated user (Firebase User object) or null
+ * @property {boolean} loading - Loading state (true while checking auth state)
+ * @property {Function} register - Function to register new user
+ * @property {Function} login - Function to login existing user
+ * @property {Function} logout - Function to logout current user
+ * 
+ * @example
+ * const { user, loading, login, logout } = useAuth();
+ * if (loading) return <Loading />;
+ * if (!user) return <LoginForm onLogin={login} />;
+ * return <App user={user} onLogout={logout} />;
+ */
 export const useAuth = () => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true); // Start with loading = true
@@ -90,7 +107,14 @@ export const useAuth = () => {
     };
   }, []);
 
-  // Register new user with email and password
+  /**
+   * Register a new user with email and password
+   * @param {string} email - User email address
+   * @param {string} password - User password
+   * @returns {Promise<{success: boolean, user?: Object, error?: string, code?: string}>}
+   *   Returns success status, user object on success, or error message/code on failure
+   * @throws {Error} If Firebase auth is not initialized
+   */
   const register = async (email, password) => {
     if (!auth) {
       const error = 'Firebase auth is not initialized. Please check Firebase configuration.';
@@ -107,7 +131,14 @@ export const useAuth = () => {
     }
   };
 
-  // Login with email and password
+  /**
+   * Login with email and password
+   * @param {string} email - User email address
+   * @param {string} password - User password
+   * @returns {Promise<{success: boolean, user?: Object, error?: string, code?: string}>}
+   *   Returns success status, user object on success, or error message/code on failure
+   * @throws {Error} If Firebase auth is not initialized
+   */
   const login = async (email, password) => {
     if (!auth) {
       const error = 'Firebase auth is not initialized. Please check Firebase configuration.';
@@ -124,7 +155,12 @@ export const useAuth = () => {
     }
   };
 
-  // Logout current user
+  /**
+   * Logout the current user
+   * @returns {Promise<{success: boolean, error?: string}>}
+   *   Returns success status or error message on failure
+   * @throws {Error} If Firebase auth is not initialized
+   */
   const logout = async () => {
     if (!auth) {
       logger.warn('[Auth]', 'Firebase auth is not initialized. Cannot logout.');

@@ -1,5 +1,6 @@
-import { memo } from 'react';
+import { memo, useRef } from 'react';
 import { X, Archive, RotateCcw, Trash2, XCircle } from 'lucide-react';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 export const ArchiveModal = memo(({
   isOpen,
@@ -11,6 +12,11 @@ export const ArchiveModal = memo(({
   onSetConfirmDeleteId,
   t,
 }) => {
+  const modalRef = useRef(null);
+
+  // Focus trap for keyboard navigation
+  useFocusTrap(isOpen, modalRef);
+
   if (!isOpen) return null;
 
   return (
@@ -22,6 +28,7 @@ export const ArchiveModal = memo(({
       aria-labelledby="archive-title"
     >
       <div
+        ref={modalRef}
         className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-[95vw] sm:max-w-2xl overflow-hidden border border-gray-200 dark:border-gray-700 h-[80vh] flex flex-col animate-in fade-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >

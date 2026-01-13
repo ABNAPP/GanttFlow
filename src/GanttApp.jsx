@@ -24,6 +24,8 @@ import { useDragAndDrop } from './hooks/useDragAndDrop';
 // Components - Core (loaded immediately)
 import { Sidebar } from './components/Sidebar';
 import { GanttChart } from './components/GanttChart';
+import { ErrorBoundary } from './components/common/ErrorBoundary';
+import { AriaLiveRegion } from './components/common/AriaLiveRegion';
 
 // Components - Lazy loaded (loaded on demand)
 const TaskModal = lazy(() => import('./components/TaskModal').then(module => ({ default: module.TaskModal })));
@@ -354,6 +356,9 @@ export default function GanttApp() {
 
   return (
     <div className={darkMode ? 'dark' : ''}>
+      {/* ARIA Live Region for screen reader announcements */}
+      <AriaLiveRegion message="" politeness="polite" atomic={true} />
+      
       <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-900 text-slate-900 dark:text-gray-100 font-sans overflow-hidden transition-colors duration-300">
         {/* Header */}
         <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex justify-between items-center shadow-sm z-30 relative transition-colors duration-300">
@@ -541,18 +546,20 @@ export default function GanttApp() {
 
           {isDashboardOpen ? (
             <div className="flex-1 overflow-auto bg-gray-50 dark:bg-gray-900">
-              <Suspense fallback={
-                <div className="flex items-center justify-center h-full">
-                  <div className="text-gray-500 dark:text-gray-400">{t('loading') || 'Loading...'}</div>
-                </div>
-              }>
-                <Dashboard 
-                  tasks={tasks} 
-                  t={t} 
-                  onTaskClick={handleOpenModal}
-                  warningThreshold={warningThreshold}
-                />
-              </Suspense>
+              <ErrorBoundary t={t}>
+                <Suspense fallback={
+                  <div className="flex items-center justify-center h-full">
+                    <div className="text-gray-500 dark:text-gray-400">{t('loading') || 'Loading...'}</div>
+                  </div>
+                }>
+                  <Dashboard 
+                    tasks={tasks} 
+                    t={t} 
+                    onTaskClick={handleOpenModal}
+                    warningThreshold={warningThreshold}
+                  />
+                </Suspense>
+              </ErrorBoundary>
             </div>
           ) : (
             <GanttChart
