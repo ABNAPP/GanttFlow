@@ -7,6 +7,7 @@ import {
   signOut
 } from 'firebase/auth';
 import { auth, isLocalDev } from '../config/firebase';
+import { logger } from '../utils/logger';
 
 export const useAuth = () => {
   const [user, setUser] = useState(null);
@@ -14,6 +15,16 @@ export const useAuth = () => {
 
   useEffect(() => {
     let isMounted = true;
+
+    // Check if auth is initialized
+    if (!auth) {
+      logger.warn('[Auth] Firebase auth is not initialized. Running in limited mode.');
+      if (isMounted) {
+        setUser(null);
+        setLoading(false);
+      }
+      return;
+    }
 
     // Set up auth state listener - this will fire immediately with current auth state
     const unsubscribe = onAuthStateChanged(
@@ -31,7 +42,9 @@ export const useAuth = () => {
             setLoading(false);
           }
           // Sign out the demo user if somehow they got through
-          signOut(auth).catch(() => {});
+          if (auth) {
+            signOut(auth).catch(() => {});
+          }
           return;
         }
         
@@ -61,7 +74,7 @@ export const useAuth = () => {
     // NOTE: In production, we should NOT use custom tokens for automatic login
     const isDev = isLocalDev();
     const token = typeof window !== 'undefined' && window.__initial_auth_token;
-    if (token && isDev) {
+    if (token && isDev && auth) {
       // Only allow custom token in local dev
       console.log('[Auth] LOCAL DEV: Custom token detected, signing in...');
       signInWithCustomToken(auth, token).catch((err) => {
@@ -79,6 +92,11 @@ export const useAuth = () => {
 
   // Register new user with email and password
   const register = async (email, password) => {
+    if (!auth) {
+      const error = 'Firebase auth is not initialized. Please check Firebase configuration.';
+      logger.error('[Auth]', error);
+      return { success: false, error, code: 'auth/not-initialized' };
+    }
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       console.log('Auth: user registered', userCredential.user.uid, userCredential.user.email);
@@ -91,6 +109,11 @@ export const useAuth = () => {
 
   // Login with email and password
   const login = async (email, password) => {
+    if (!auth) {
+      const error = 'Firebase auth is not initialized. Please check Firebase configuration.';
+      logger.error('[Auth]', error);
+      return { success: false, error, code: 'auth/not-initialized' };
+    }
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       console.log('Auth: user logged in', userCredential.user.uid, userCredential.user.email);
@@ -103,6 +126,10 @@ export const useAuth = () => {
 
   // Logout current user
   const logout = async () => {
+    if (!auth) {
+      logger.warn('[Auth]', 'Firebase auth is not initialized. Cannot logout.');
+      return { success: false, error: 'Firebase auth is not initialized' };
+    }
     try {
       await signOut(auth);
       console.log('Auth: user logged out');
