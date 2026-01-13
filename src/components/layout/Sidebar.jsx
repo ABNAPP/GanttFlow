@@ -1,6 +1,7 @@
 import { memo } from 'react';
 import { Layers, ArrowUpDown } from 'lucide-react';
 import { TaskItem } from '../common/TaskItem';
+import { SkeletonLoader } from '../common/SkeletonLoader';
 
 export const Sidebar = memo(({
   isOpen,
@@ -53,7 +54,9 @@ export const Sidebar = memo(({
       </div>
 
       {loading ? (
-        <div className="p-4 text-gray-400 text-xs text-center">{t('loading')}</div>
+        <div className="p-4 space-y-2">
+          <SkeletonLoader variant="task" count={5} />
+        </div>
       ) : !tasks || Object.keys(tasks).length === 0 ? (
         <div className="p-8 text-center text-gray-400 dark:text-gray-500 text-sm">{t('noTasks')}</div>
       ) : (

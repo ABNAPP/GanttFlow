@@ -95,6 +95,12 @@ const DebugPanel = ({ tasks, stats, normalizeSubtaskPriority, checkIsDone, getTa
     Låg: priorityCounts.låg || 0,
   };
 
+  // Filter active tasks (not deleted, not done) for filter information
+  const active = tasks.filter(t => {
+    if (t.deleted) return false;
+    return !checkIsDone(t.status);
+  });
+
   // Determine filter information
   const tasksIncluded = active.length > 0 ? 'activeOnly (not deleted, not done)' : 'all';
   const subtasksIncluded = 'activeOnly (not done)';

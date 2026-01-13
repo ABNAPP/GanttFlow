@@ -2,6 +2,7 @@ import { memo, useState, useEffect, useRef } from 'react';
 import { ChevronRight, ChevronDown, AlertTriangle, Briefcase, CheckSquare, Tag, MessageSquare, X } from 'lucide-react';
 import { RoleBadge } from './RoleBadge';
 import { getTimeStatus, calculateChecklistProgress, getTaskDisplayStatus } from '../../utils/helpers';
+import { sanitizeText } from '../../utils/sanitize';
 
 export const TaskItem = memo(({
   task,
@@ -99,7 +100,7 @@ export const TaskItem = memo(({
           {task.client && (
             <div className="flex items-center gap-1 text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wide">
               <Briefcase size={10} />
-              <span className="truncate">{task.client}</span>
+              <span className="truncate" dangerouslySetInnerHTML={{ __html: sanitizeText(task.client) }} />
             </div>
           )}
           <div className="flex items-center gap-1.5 flex-wrap">
@@ -112,7 +113,7 @@ export const TaskItem = memo(({
                     className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded text-[9px]"
                   >
                     <Tag size={8} />
-                    {tag}
+                    <span dangerouslySetInnerHTML={{ __html: sanitizeText(tag) }} />
                   </span>
                 ))}
                 {task.tags.length > 2 && (
@@ -152,9 +153,8 @@ export const TaskItem = memo(({
                     ? 'text-red-600 dark:text-red-400 font-bold'
                     : 'text-gray-800 dark:text-gray-200'
                 }`}
-              >
-                {task.title}
-              </h3>
+                dangerouslySetInnerHTML={{ __html: sanitizeText(task.title) }}
+              />
             </div>
 
             <div className="flex items-center gap-1.5">
@@ -204,11 +204,9 @@ export const TaskItem = memo(({
                                 key={comment.id}
                                 className="p-2 bg-gray-50 dark:bg-gray-700/50 rounded text-xs border border-gray-100 dark:border-gray-600"
                               >
-                                <p className="text-gray-700 dark:text-gray-200 mb-1 whitespace-pre-wrap break-words">
-                                  {comment.text}
-                                </p>
+                                <p className="text-gray-700 dark:text-gray-200 mb-1 whitespace-pre-wrap break-words" dangerouslySetInnerHTML={{ __html: sanitizeText(comment.text) }} />
                                 <p className="text-[10px] text-gray-400 dark:text-gray-500">
-                                  {comment.author || 'Användare'} •{' '}
+                                  <span dangerouslySetInnerHTML={{ __html: sanitizeText(comment.author || 'Användare') }} /> •{' '}
                                   {comment.createdAt
                                     ? new Date(comment.createdAt).toLocaleString('sv-SE', {
                                         year: 'numeric',
@@ -358,9 +356,8 @@ export const TaskItem = memo(({
                         ? 'line-through text-gray-400'
                         : 'text-gray-600 dark:text-gray-300'
                     }`}
-                  >
-                    {item.text}
-                  </span>
+                    dangerouslySetInnerHTML={{ __html: sanitizeText(item.text) }}
+                  />
                 </div>
                 {(item.startDate || item.endDate) && (
                   <div className="pl-5 text-[9px] text-gray-400 flex gap-2">

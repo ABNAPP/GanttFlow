@@ -2,6 +2,7 @@ import { memo } from 'react';
 import { CheckSquare, Edit2, Trash2 } from 'lucide-react';
 import { getTimeStatus } from '../../utils/helpers';
 import { AlertTriangle } from 'lucide-react';
+import { sanitizeText } from '../../utils/sanitize';
 
 export const ChecklistItem = memo(({
   item,
@@ -136,9 +137,8 @@ export const ChecklistItem = memo(({
               ? 'line-through text-gray-400'
               : 'text-gray-700 dark:text-gray-200'
           }`}
-        >
-          {item.text}
-        </span>
+          dangerouslySetInnerHTML={{ __html: sanitizeText(item.text) }}
+        />
 
         <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
           <button
@@ -171,7 +171,7 @@ export const ChecklistItem = memo(({
           )}
           {item.executor && (
             <span className="text-indigo-600 dark:text-indigo-400 font-semibold">
-              {t('statExecutor')}: {item.executor}
+              {t('statExecutor')}: <span dangerouslySetInnerHTML={{ __html: sanitizeText(item.executor) }} />
             </span>
           )}
         </div>

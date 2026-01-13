@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
 import { memo } from 'react';
-import { X, Trash2, Plus, Check, XCircle, RefreshCw, Edit2 } from 'lucide-react';
-import { ChecklistItem } from '../common/ChecklistItem';
-import { generateId, formatDate, calculateChecklistProgress, validateTaskForm, getTaskDisplayStatus } from '../../utils/helpers';
+import { X, Trash2, Check, XCircle, Plus } from 'lucide-react';
+import { formatDate, validateTaskForm, getTaskDisplayStatus } from '../../utils/helpers';
 import { showError, showSuccess } from '../../utils/toast';
+import { validateAndSanitizeInput } from '../../utils/sanitize';
+import { logger } from '../../utils/logger';
+import { TaskCommentsSection } from './TaskCommentsSection';
+import { TaskChecklistSection } from './TaskChecklistSection';
 
 export const TaskModal = memo(({
   isOpen,
@@ -33,32 +36,21 @@ export const TaskModal = memo(({
     tags: [],
     comments: [],
   });
-  const [newComment, setNewComment] = useState('');
-  const [editingCommentId, setEditingCommentId] = useState(null);
-  const [editingCommentText, setEditingCommentText] = useState('');
-
-  const [newChecklistItem, setNewChecklistItem] = useState('');
   const [newTag, setNewTag] = useState('');
-  const [newChecklistStartDate, setNewChecklistStartDate] = useState('');
-  const [newChecklistEndDate, setNewChecklistEndDate] = useState('');
-  const [newChecklistExecutor, setNewChecklistExecutor] = useState('');
-  const [newChecklistPriority, setNewChecklistPriority] = useState('normal');
-  const [editingChecklistId, setEditingChecklistId] = useState(null);
-  const [tempChecklistData, setTempChecklistData] = useState({});
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [validationErrors, setValidationErrors] = useState([]);
 
   // Initialize form data when task changes
   useEffect(() => {
     if (task) {
-      console.log('[TaskModal] Loading task with comments:', task.comments);
+      logger.logWithPrefix('TaskModal', 'Loading task with comments:', task.comments);
       
       // Get display status (may be 'Försenad' if overdue, but we store original task.status)
       const { status: displayStatus, reason } = getTaskDisplayStatus(task);
       
       // Debug logging (only in development, localhost)
       if (import.meta.env.DEV && typeof window !== 'undefined' && window.location.hostname === 'localhost') {
-        console.log('[TaskModal Debug] Task loaded:', {
+        logger.logWithPrefix('TaskModal Debug', 'Task loaded:', {
           'task.status (raw)': task.status,
           'getTaskDisplayStatus(task).status (display)': displayStatus,
           'getTaskDisplayStatus(task).reason': reason,
@@ -112,141 +104,9 @@ export const TaskModal = memo(({
         comments: [],
       });
     }
-    setNewChecklistItem('');
-    setNewChecklistStartDate('');
-    setNewChecklistEndDate('');
-    setNewChecklistExecutor('');
-    setNewChecklistPriority('normal');
-    setEditingChecklistId(null);
-    setNewComment('');
-    setEditingCommentId(null);
-    setEditingCommentText('');
     setIsDeleteConfirmOpen(false);
     setValidationErrors([]);
   }, [task, isOpen]);
-
-  const handleAddChecklist = () => {
-    if (!newChecklistItem.trim()) return;
-    const newItem = {
-      id: generateId(),
-      text: newChecklistItem,
-      done: false,
-      startDate: newChecklistStartDate || null,
-      endDate: newChecklistEndDate || null,
-      executor: newChecklistExecutor || null,
-      priority: newChecklistPriority || 'normal', // Always include priority field
-    };
-    setFormData((prev) => ({
-      ...prev,
-      checklist: [...(prev.checklist || []), newItem],
-    }));
-    setNewChecklistItem('');
-    setNewChecklistStartDate('');
-    setNewChecklistEndDate('');
-    setNewChecklistExecutor('');
-    setNewChecklistPriority('normal');
-  };
-
-  const toggleChecklist = (id) => {
-    const updated = formData.checklist.map((item) => {
-      if (item.id === id) return { ...item, done: !item.done };
-      return item;
-    });
-    setFormData((prev) => ({ ...prev, checklist: updated }));
-  };
-
-  const removeChecklist = (id) => {
-    const updated = formData.checklist.filter((item) => item.id !== id);
-    setFormData((prev) => ({ ...prev, checklist: updated }));
-  };
-
-  const startEditingChecklist = (item) => {
-    setEditingChecklistId(item.id);
-    setTempChecklistData({
-      text: item.text,
-      startDate: item.startDate || '',
-      endDate: item.endDate || '',
-      executor: item.executor || '',
-      priority: item.priority || 'normal',
-    });
-  };
-
-  const saveEditingChecklist = () => {
-    const updated = formData.checklist.map((item) => {
-      if (item.id === editingChecklistId) {
-        return {
-          ...item,
-          text: tempChecklistData.text,
-          startDate: tempChecklistData.startDate || null,
-          endDate: tempChecklistData.endDate || null,
-          executor: tempChecklistData.executor || null,
-          priority: tempChecklistData.priority || item.priority || 'normal', // Preserve existing priority if not changed, default to 'normal'
-        };
-      }
-      return item;
-    });
-    setFormData((prev) => ({ ...prev, checklist: updated }));
-    setEditingChecklistId(null);
-    setTempChecklistData({});
-  };
-
-  const cancelEditingChecklist = () => {
-    setEditingChecklistId(null);
-    setTempChecklistData({});
-  };
-
-  const handleAddComment = () => {
-    if (!newComment.trim()) return;
-    const comment = {
-      id: generateId(),
-      text: newComment.trim(),
-      createdAt: new Date().toISOString(),
-      author: 'User', // Could be enhanced with actual user info
-    };
-    console.log('[TaskModal] Adding comment:', comment);
-    setFormData((prev) => {
-      const updated = {
-        ...prev,
-        comments: [...(prev.comments || []), comment],
-      };
-      console.log('[TaskModal] Updated formData with comments:', updated.comments);
-      return updated;
-    });
-    setNewComment('');
-  };
-
-  const handleDeleteComment = (commentId) => {
-    setFormData((prev) => ({
-      ...prev,
-      comments: (prev.comments || []).filter((c) => c.id !== commentId),
-    }));
-  };
-
-  const startEditComment = (comment) => {
-    setEditingCommentId(comment.id);
-    setEditingCommentText(comment.text || '');
-  };
-
-  const cancelEditComment = () => {
-    setEditingCommentId(null);
-    setEditingCommentText('');
-  };
-
-  const saveEditComment = () => {
-    if (!editingCommentText.trim()) {
-      showError(t('commentEmpty') || 'Kommentaren kan inte vara tom');
-      return;
-    }
-    setFormData((prev) => ({
-      ...prev,
-      comments: (prev.comments || []).map((c) =>
-        c.id === editingCommentId
-          ? { ...c, text: editingCommentText.trim() }
-          : c
-      ),
-    }));
-    cancelEditComment();
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -281,7 +141,7 @@ export const TaskModal = memo(({
     
     // Debug logging (only in development, localhost)
     if (import.meta.env.DEV && typeof window !== 'undefined' && window.location.hostname === 'localhost') {
-      console.log('[TaskModal Debug] Submitting:', {
+      logger.logWithPrefix('TaskModal Debug', 'Submitting:', {
         'formData.status (display)': formData.status,
         'dataToSave.status (saved)': dataToSave.status,
         'task.status (original)': task?.status,
@@ -289,7 +149,7 @@ export const TaskModal = memo(({
       });
     }
     
-    console.log('[TaskModal] Submitting formData with comments:', dataToSave.comments);
+    logger.logWithPrefix('TaskModal', 'Submitting formData with comments:', dataToSave.comments);
     try {
       await onSave(dataToSave);
       // Only show success if onSave didn't throw an error
@@ -298,7 +158,7 @@ export const TaskModal = memo(({
     } catch (error) {
       // Error is already shown by onSave
       // Don't close modal on error so user can retry
-      console.error('Error in handleSubmit:', error);
+      logger.error('Error in handleSubmit:', error);
       // Don't throw - let user see the error and retry
     }
   };
@@ -364,7 +224,10 @@ export const TaskModal = memo(({
               <input
                 type="text"
                 value={formData.client}
-                onChange={(e) => setFormData((prev) => ({ ...prev, client: e.target.value }))}
+                onChange={(e) => {
+                  const sanitized = validateAndSanitizeInput(e.target.value, 100);
+                  setFormData((prev) => ({ ...prev, client: sanitized }));
+                }}
                 className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-500"
                 placeholder={t('phClient')}
                 aria-label={t('labelClient')}
@@ -378,7 +241,10 @@ export const TaskModal = memo(({
                 required
                 type="text"
                 value={formData.title}
-                onChange={(e) => setFormData((prev) => ({ ...prev, title: e.target.value }))}
+                onChange={(e) => {
+                  const sanitized = validateAndSanitizeInput(e.target.value, 200);
+                  setFormData((prev) => ({ ...prev, title: sanitized }));
+                }}
                 className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-500"
                 placeholder={t('phTitle')}
                 aria-label={t('labelTitle')}
@@ -431,7 +297,10 @@ export const TaskModal = memo(({
               type="text"
               list="phases"
               value={formData.phase}
-              onChange={(e) => setFormData((prev) => ({ ...prev, phase: e.target.value }))}
+              onChange={(e) => {
+                const sanitized = validateAndSanitizeInput(e.target.value, 100);
+                setFormData((prev) => ({ ...prev, phase: sanitized }));
+              }}
               className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-500"
               placeholder={t('phPhase')}
               aria-label={t('labelPhase')}
@@ -479,14 +348,18 @@ export const TaskModal = memo(({
               <input
                 type="text"
                 value={newTag}
-                onChange={(e) => setNewTag(e.target.value)}
+                onChange={(e) => {
+                  const sanitized = validateAndSanitizeInput(e.target.value, 50);
+                  setNewTag(sanitized);
+                }}
                 onKeyPress={(e) => {
                   if (e.key === 'Enter' && newTag.trim()) {
                     e.preventDefault();
-                    if (!formData.tags.includes(newTag.trim())) {
+                    const sanitizedTag = validateAndSanitizeInput(newTag.trim(), 50);
+                    if (sanitizedTag && !formData.tags.includes(sanitizedTag)) {
                       setFormData((prev) => ({
                         ...prev,
-                        tags: [...prev.tags, newTag.trim()],
+                        tags: [...prev.tags, sanitizedTag],
                       }));
                     }
                     setNewTag('');
@@ -499,10 +372,11 @@ export const TaskModal = memo(({
               <button
                 type="button"
                 onClick={() => {
-                  if (newTag.trim() && !formData.tags.includes(newTag.trim())) {
+                  const sanitizedTag = validateAndSanitizeInput(newTag.trim(), 50);
+                  if (sanitizedTag && !formData.tags.includes(sanitizedTag)) {
                     setFormData((prev) => ({
                       ...prev,
-                      tags: [...prev.tags, newTag.trim()],
+                      tags: [...prev.tags, sanitizedTag],
                     }));
                     setNewTag('');
                   }
@@ -551,113 +425,14 @@ export const TaskModal = memo(({
           </div>
 
           {/* Checklist */}
-          <div className="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg border border-gray-100 dark:border-gray-700">
-            <h3 className="text-xs font-bold text-gray-400 uppercase mb-3 flex justify-between">
-              {t('labelChecklist')}{' '}
-              <span className="text-indigo-500">{calculateChecklistProgress(formData.checklist)}%</span>
-            </h3>
-            <div className="h-1.5 w-full bg-gray-200 dark:bg-gray-600 rounded-full mb-4">
-              <div
-                className="h-full bg-indigo-500 rounded-full transition-all duration-300"
-                style={{ width: `${calculateChecklistProgress(formData.checklist)}%` }}
-                role="progressbar"
-                aria-valuenow={calculateChecklistProgress(formData.checklist)}
-                aria-valuemin={0}
-                aria-valuemax={100}
-              />
-            </div>
-            <div className="space-y-2 mb-3">
-              {formData.checklist?.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex flex-col gap-1 py-1 border-b border-gray-100 dark:border-gray-600/30 last:border-0"
-                >
-                  <ChecklistItem
-                    item={item}
-                    isEditing={editingChecklistId === item.id}
-                    tempData={tempChecklistData}
-                    warningThreshold={warningThreshold}
-                    onToggle={() => toggleChecklist(item.id)}
-                    onEdit={() => startEditingChecklist(item)}
-                    onSaveEdit={saveEditingChecklist}
-                    onCancelEdit={cancelEditingChecklist}
-                    onDelete={() => removeChecklist(item.id)}
-                    onTextChange={(text) => setTempChecklistData((prev) => ({ ...prev, text }))}
-                    onStartDateChange={(date) => setTempChecklistData((prev) => ({ ...prev, startDate: date }))}
-                    onEndDateChange={(date) => setTempChecklistData((prev) => ({ ...prev, endDate: date }))}
-                    onExecutorChange={(executor) => setTempChecklistData((prev) => ({ ...prev, executor }))}
-                    onPriorityChange={(priority) => setTempChecklistData((prev) => ({ ...prev, priority }))}
-                    t={t}
-                  />
-                </div>
-              ))}
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={newChecklistItem}
-                  onChange={(e) => setNewChecklistItem(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      handleAddChecklist();
-                    }
-                  }}
-                  placeholder={t('phChecklist')}
-                  className="flex-1 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-md px-3 py-1.5 text-sm outline-none focus:border-indigo-500"
-                  aria-label={t('phChecklist')}
-                />
-                <button
-                  type="button"
-                  onClick={handleAddChecklist}
-                  className="bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-300 px-3 py-1.5 rounded-md hover:bg-indigo-200 dark:hover:bg-indigo-900/70 transition-colors"
-                  aria-label={t('addChecklistItem')}
-                >
-                  <Plus size={16} />
-                </button>
-              </div>
-              <div className="flex gap-2 items-center text-xs flex-wrap">
-                <label className="text-gray-500 dark:text-gray-400">{t('checklistStart')}:</label>
-                <input
-                  type="date"
-                  value={newChecklistStartDate}
-                  onChange={(e) => setNewChecklistStartDate(e.target.value)}
-                  className="border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded px-2 py-1 outline-none text-gray-600 dark:text-gray-300"
-                  aria-label={t('checklistStart')}
-                />
-                <label className="text-gray-500 dark:text-gray-400 ml-2">{t('checklistEnd')}:</label>
-                <input
-                  type="date"
-                  value={newChecklistEndDate}
-                  onChange={(e) => setNewChecklistEndDate(e.target.value)}
-                  className="border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded px-2 py-1 outline-none text-gray-600 dark:text-gray-300"
-                  aria-label={t('checklistEnd')}
-                />
-                <label className="text-gray-500 dark:text-gray-400 ml-2 font-semibold text-indigo-600 dark:text-indigo-400">{t('statExecutor')}:</label>
-                <input
-                  type="text"
-                  value={newChecklistExecutor}
-                  onChange={(e) => setNewChecklistExecutor(e.target.value)}
-                  placeholder={t('hlPlaceholder')}
-                  className="border border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-900/40 rounded px-2 py-1 outline-none text-gray-700 dark:text-gray-300 text-xs"
-                  aria-label={t('statExecutor')}
-                />
-                <label className="text-gray-500 dark:text-gray-400 ml-2">{t('labelPriority')}:</label>
-                <select
-                  value={newChecklistPriority}
-                  onChange={(e) => setNewChecklistPriority(e.target.value)}
-                  className="border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded px-2 py-1 outline-none text-gray-600 dark:text-gray-300 text-xs"
-                  aria-label={t('labelPriority')}
-                >
-                  <option value="low">{t('priorityLow')}</option>
-                  <option value="normal">{t('priorityNormal')}</option>
-                  <option value="high">{t('priorityHigh')}</option>
-                </select>
-              </div>
-            </div>
-          </div>
+          <TaskChecklistSection
+            checklist={formData.checklist || []}
+            onChecklistChange={(updatedChecklist) =>
+              setFormData((prev) => ({ ...prev, checklist: updatedChecklist }))
+            }
+            warningThreshold={warningThreshold}
+            t={t}
+          />
 
           {/* Roles */}
           <div className="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg border border-gray-100 dark:border-gray-700">
@@ -679,7 +454,10 @@ export const TaskModal = memo(({
                   <input
                     type="text"
                     value={formData[key] || ''}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, [key]: e.target.value }))}
+                    onChange={(e) => {
+                      const sanitized = validateAndSanitizeInput(e.target.value, 100);
+                      setFormData((prev) => ({ ...prev, [key]: sanitized }));
+                    }}
                     className="w-full border border-gray-200 dark:border-gray-600 dark:bg-gray-700 rounded px-2 py-1 text-sm"
                     aria-label={label}
                   />
@@ -688,135 +466,15 @@ export const TaskModal = memo(({
             </div>
           </div>
 
-          {/* Comments Section - Always visible */}
-          <div className="p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg border-2 border-indigo-200 dark:border-indigo-800">
-            <div className="flex items-center gap-2 mb-3">
-              <h3 className="text-xs font-bold text-indigo-700 dark:text-indigo-300 uppercase">{t('labelComments')}</h3>
-              {formData.comments && formData.comments.length > 0 && (
-                <span className="text-xs bg-indigo-200 dark:bg-indigo-800 text-indigo-700 dark:text-indigo-300 px-2 py-0.5 rounded-full">
-                  {formData.comments.length}
-                </span>
-              )}
-            </div>
-            
-            {/* Comments List */}
-            {formData.comments && formData.comments.length > 0 ? (
-              <div className="space-y-3 mb-4 max-h-48 overflow-y-auto">
-                {formData.comments.map((comment) => (
-                  <div
-                    key={comment.id}
-                    className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-600 shadow-sm"
-                  >
-                    {editingCommentId === comment.id ? (
-                      /* Edit Mode */
-                      <div className="space-y-2">
-                        <textarea
-                          value={editingCommentText}
-                          onChange={(e) => setEditingCommentText(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-                              e.preventDefault();
-                              saveEditComment();
-                            }
-                          }}
-                          className="w-full border-2 border-indigo-300 dark:border-indigo-600 dark:bg-gray-700 rounded-lg px-3 py-2 text-sm resize-none outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 dark:focus:ring-indigo-800 text-gray-700 dark:text-gray-200"
-                          rows="3"
-                          aria-label={t('editComment') || 'Redigera kommentar'}
-                        />
-                        <div className="flex items-center justify-between">
-                          <p className="text-xs text-gray-400 dark:text-gray-500">
-                            {comment.author} • {new Date(comment.createdAt).toLocaleString(lang === 'sv' ? 'sv-SE' : 'en-US')}
-                          </p>
-                          <div className="flex gap-2">
-                            <button
-                              type="button"
-                              onClick={saveEditComment}
-                              className="p-1.5 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 rounded transition-colors"
-                              aria-label={t('saveEdit') || 'Spara ändring'}
-                            >
-                              <Check size={16} />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={cancelEditComment}
-                              className="p-1.5 text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
-                              aria-label={t('cancelEdit') || 'Avbryt redigering'}
-                            >
-                              <XCircle size={16} />
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    ) : (
-                      /* View Mode */
-                    <div className="flex items-start justify-between gap-2 mb-1">
-                      <div className="flex-1">
-                        <p className="text-sm text-gray-700 dark:text-gray-200">{comment.text}</p>
-                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                          {comment.author} • {new Date(comment.createdAt).toLocaleString(lang === 'sv' ? 'sv-SE' : 'en-US')}
-                        </p>
-                      </div>
-                        <div className="flex gap-1 flex-shrink-0">
-                          <button
-                            type="button"
-                            onClick={() => startEditComment(comment)}
-                            className="p-1 text-gray-400 hover:text-indigo-500 transition-colors"
-                            aria-label={t('editComment') || 'Redigera kommentar'}
-                          >
-                            <Edit2 size={14} />
-                          </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteComment(comment.id)}
-                            className="p-1 text-gray-400 hover:text-red-500 transition-colors"
-                        aria-label={t('deleteComment')}
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="mb-4 p-3 bg-white dark:bg-gray-800 rounded-lg border border-dashed border-gray-300 dark:border-gray-600">
-                <p className="text-sm text-gray-400 dark:text-gray-500 text-center">{t('noComments')}</p>
-              </div>
-            )}
-
-            {/* Add Comment - Always visible */}
-            <div className="space-y-2">
-              <div className="flex gap-2">
-                <textarea
-                  value={newComment}
-                  onChange={(e) => setNewComment(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-                      e.preventDefault();
-                      handleAddComment();
-                    }
-                  }}
-                  placeholder={t('commentPlaceholder')}
-                  className="flex-1 border-2 border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg px-3 py-2 text-sm resize-none outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 dark:focus:ring-indigo-800"
-                  rows="2"
-                  aria-label={t('commentPlaceholder')}
-                />
-                <button
-                  type="button"
-                  onClick={handleAddComment}
-                  disabled={!newComment.trim()}
-                  className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg text-sm flex items-center gap-1 flex-shrink-0 transition-colors"
-                  aria-label={t('addComment')}
-                >
-                  <Plus size={16} />
-                </button>
-              </div>
-              <p className="text-xs text-gray-500 dark:text-gray-400 italic">
-                {lang === 'sv' ? '💡 Tryck Ctrl+Enter för att lägga till snabbt' : '💡 Press Ctrl+Enter to add quickly'}
-              </p>
-            </div>
-          </div>
+          {/* Comments Section */}
+          <TaskCommentsSection
+            comments={formData.comments || []}
+            onCommentsChange={(updatedComments) =>
+              setFormData((prev) => ({ ...prev, comments: updatedComments }))
+            }
+            lang={lang}
+            t={t}
+          />
 
           <div className="flex justify-between pt-2 items-center">
             {task &&

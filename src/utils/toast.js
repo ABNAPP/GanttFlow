@@ -10,33 +10,57 @@ export const initToast = () => {
   }
 };
 
-export const showToast = (message, type = 'info') => {
+export const showToast = (message, type = 'info', duration = 3000) => {
   initToast();
   
   const toast = document.createElement('div');
   const bgColor = {
-    success: 'bg-green-500',
-    error: 'bg-red-500',
-    warning: 'bg-yellow-500',
-    info: 'bg-blue-500'
-  }[type] || 'bg-gray-500';
+    success: 'bg-green-500 dark:bg-green-600',
+    error: 'bg-red-500 dark:bg-red-600',
+    warning: 'bg-yellow-500 dark:bg-yellow-600',
+    info: 'bg-blue-500 dark:bg-blue-600'
+  }[type] || 'bg-gray-500 dark:bg-gray-600';
   
-  toast.className = `${bgColor} text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 min-w-[200px] animate-in slide-in-from-right duration-300`;
+  const icons = {
+    success: '✓',
+    error: '✕',
+    warning: '⚠',
+    info: 'ℹ'
+  };
+  
+  toast.className = `${bgColor} text-white px-4 py-3 rounded-lg shadow-xl flex items-center gap-3 min-w-[250px] max-w-md transform transition-all duration-300 translate-x-full opacity-0`;
+  toast.setAttribute('role', 'alert');
+  toast.setAttribute('aria-live', type === 'error' ? 'assertive' : 'polite');
   toast.innerHTML = `
-    <span>${message}</span>
-    <button class="ml-auto text-white hover:text-gray-200" onclick="this.parentElement.remove()">×</button>
+    <span class="flex-shrink-0 text-lg font-semibold">${icons[type] || ''}</span>
+    <span class="flex-1 text-sm font-medium">${message}</span>
+    <button 
+      class="ml-auto text-white hover:text-gray-200 focus:outline-none focus:ring-2 focus:ring-white rounded p-1 transition-colors" 
+      onclick="this.parentElement.remove()"
+      aria-label="Close notification"
+    >×</button>
   `;
   
   toastContainer.appendChild(toast);
   
-  // Auto remove after 3 seconds
+  // Trigger animation
+  requestAnimationFrame(() => {
+    toast.style.transform = 'translateX(0)';
+    toast.style.opacity = '1';
+  });
+  
+  // Auto remove after duration
   setTimeout(() => {
     if (toast.parentElement) {
+      toast.style.transform = 'translateX(full)';
       toast.style.opacity = '0';
-      toast.style.transition = 'opacity 0.3s';
-      setTimeout(() => toast.remove(), 300);
+      setTimeout(() => {
+        if (toast.parentElement) {
+          toast.remove();
+        }
+      }, 300);
     }
-  }, 3000);
+  }, duration);
 };
 
 export const showError = (message) => showToast(message, 'error');

@@ -176,7 +176,11 @@ export const GanttChart = memo(({
                       className="relative h-[40px] border-b border-gray-50/50 dark:border-gray-800/50 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group"
                     >
                       <div
-                        className={`absolute top-2 h-6 shadow-sm cursor-grab active:cursor-grabbing flex items-center justify-center text-white text-[10px] z-10 group-hover:brightness-95 transition-all select-none overflow-hidden ${(() => {
+                        className={`absolute top-2 h-6 shadow-sm cursor-grab active:cursor-grabbing flex items-center justify-center text-white text-[10px] z-10 group-hover:brightness-95 transition-all select-none overflow-hidden ${
+                          dragState && dragState.taskId === task.id 
+                            ? 'ring-2 ring-indigo-400 ring-offset-2 shadow-xl scale-105 z-20' 
+                            : ''
+                        } ${(() => {
                           // Use display status (may be 'Försenad' if overdue)
                           const { status: displayStatus } = getTaskDisplayStatus(task);
                           return getStatusColor(displayStatus, style.isMilestone, isOverdue);
@@ -185,6 +189,7 @@ export const GanttChart = memo(({
                           left: style.left,
                           width: style.width,
                           transform: style.isMilestone ? 'translateY(2px) rotate(45deg)' : 'none',
+                          transition: dragState && dragState.taskId === task.id ? 'none' : 'all 0.2s ease',
                         }}
                         onMouseDown={(e) => onDragStart(e, task)}
                         onTouchStart={(e) => onDragStart(e, task)}
@@ -193,10 +198,17 @@ export const GanttChart = memo(({
                             onTaskClick(task);
                           }
                         }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            onTaskClick(task);
+                          }
+                        }}
                         title={`${task.title}\n${task.startDate} -> ${task.endDate}`}
                         role="button"
                         tabIndex={0}
-                        aria-label={`Task: ${task.title}`}
+                        aria-label={`Task: ${task.title}, ${task.startDate} to ${task.endDate}`}
+                        aria-pressed={dragState && dragState.taskId === task.id ? 'true' : 'false'}
                       >
                         {!style.isMilestone && isWarning && (
                           <div

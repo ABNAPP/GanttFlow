@@ -1,6 +1,6 @@
 // Main App component - Refactored from GanttApp.jsx
 // Source: src/GanttApp.jsx
-import { useState, useEffect, useMemo, useCallback, useRef, Suspense, lazy } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 
 // Hooks
 import { useAuth } from './hooks/useAuth';
@@ -13,26 +13,9 @@ import { useDebounce } from './hooks/useDebounce';
 
 // Layout Components
 import { Header } from './components/layout/Header';
-import { Sidebar } from './components/layout/Sidebar';
-import { NavigationSidebar } from './components/layout/NavigationSidebar';
-import { TaskDetailPanel } from './components/layout/TaskDetailPanel';
 import { FiltersBar } from './components/common/FiltersBar';
-
-// Feature Components - Lazy loaded for code splitting
-const GanttTimeline = lazy(() => import('./components/gantt/GanttTimeline').then(module => ({ default: module.GanttTimeline })));
-const Dashboard = lazy(() => import('./components/dashboard/Dashboard').then(module => ({ default: module.Dashboard })));
-const QuickListView = lazy(() => import('./components/views/QuickListView').then(module => ({ default: module.QuickListView })));
-const SplitView = lazy(() => import('./components/views/SplitView').then(module => ({ default: module.SplitView })));
-const TermsView = lazy(() => import('./components/views/TermsView').then(module => ({ default: module.TermsView })));
-
-// Modal Components - Lazy loaded (only loaded when modals are opened)
-const TaskModal = lazy(() => import('./components/modals/TaskModal').then(module => ({ default: module.TaskModal })));
-const SettingsModal = lazy(() => import('./components/modals/SettingsModal').then(module => ({ default: module.SettingsModal })));
-const ArchiveModal = lazy(() => import('./components/modals/ArchiveModal').then(module => ({ default: module.ArchiveModal })));
-const TrashModal = lazy(() => import('./components/modals/TrashModal').then(module => ({ default: module.TrashModal })));
-const QuickListModal = lazy(() => import('./components/modals/QuickListModal').then(module => ({ default: module.QuickListModal })));
-const QuickListArchiveModal = lazy(() => import('./components/modals/QuickListArchiveModal').then(module => ({ default: module.QuickListArchiveModal })));
-const QuickListTrashModal = lazy(() => import('./components/modals/QuickListTrashModal').then(module => ({ default: module.QuickListTrashModal })));
+import { AppLayout } from './components/layout/AppLayout';
+import { ModalsContainer } from './components/layout/ModalsContainer';
 
 // Utils & Config
 import { TRANSLATIONS } from './constants/translations';
@@ -46,6 +29,7 @@ import { FirebaseHealthCheck } from './components/common/FirebaseHealthCheck';
 import { DemoModeWarning } from './components/common/DemoModeWarning';
 import { AuthScreen } from './components/common/AuthScreen';
 import { isLocalDev } from './config/firebase';
+import { logger } from './utils/logger';
 
 // Initialize toast on load
 if (typeof window !== 'undefined') {
@@ -59,7 +43,7 @@ export default function App() {
   // Debug log when App mounts
   useEffect(() => {
     const isDev = isLocalDev();
-    console.log(`[App] ${isDev ? 'LOCAL DEV' : 'PRODUCTION'} - App mounted, current user:`, 
+    logger.logWithPrefix('App', `${isDev ? 'LOCAL DEV' : 'PRODUCTION'} - App mounted, current user:`, 
       user ? `${user.uid} (${user.email || 'no email'})` : 'null');
   }, [user]);
 
@@ -245,7 +229,7 @@ export default function App() {
   const processedTasks = useMemo(() => {
     // Ensure tasks is an array
     if (!Array.isArray(tasks)) {
-      console.warn('Tasks is not an array:', tasks);
+      logger.warn('Tasks is not an array:', tasks);
       return {};
     }
 
@@ -363,6 +347,17 @@ export default function App() {
     setIsTaskDetailPanelOpen(true);
   }, [dragState]);
 
+  const handleCloseTaskDetailPanel = useCallback(() => {
+    setIsTaskDetailPanelOpen(false);
+    setSelectedTask(null);
+  }, []);
+
+  const handleEditTask = useCallback((task) => {
+    setEditingTask(task);
+    setIsModalOpen(true);
+    setIsTaskDetailPanelOpen(false);
+  }, []);
+
   // Handle view change
   const handleViewChange = useCallback((view) => {
     setCurrentView(view);
@@ -374,11 +369,11 @@ export default function App() {
   const handleSaveTask = useCallback(async (formData) => {
     // DEV-log: verify comments are included (localhost only)
     if (import.meta.env.DEV && typeof window !== 'undefined' && window.location.hostname === 'localhost') {
-      console.log('[onSave->addTask] comments length:', formData.comments?.length);
-      console.log('[onSave->addTask] comments data:', formData.comments);
+      logger.logWithPrefix('onSave->addTask', 'comments length:', formData.comments?.length);
+      logger.logWithPrefix('onSave->addTask', 'comments data:', formData.comments);
     }
     
-    console.log('handleSaveTask called:', { 
+    logger.logWithPrefix('handleSaveTask', 'called:', { 
       authLoading, 
       hasUser: !!user, 
       userId: user?.uid,
@@ -387,7 +382,7 @@ export default function App() {
 
     // Wait for auth to be ready (but with timeout)
     if (authLoading) {
-      console.log('Waiting for auth to complete...');
+      logger.logWithPrefix('handleSaveTask', 'Waiting for auth to complete...');
       // Wait max 1 second for auth
       let waited = 0;
       while (authLoading && waited < 1000) {
@@ -395,30 +390,30 @@ export default function App() {
         waited += 100;
       }
       if (authLoading) {
-        console.warn('Auth still loading after timeout, proceeding anyway');
+        logger.warn('Auth still loading after timeout, proceeding anyway');
       }
     }
 
     if (!user) {
-      console.error('Cannot save task: No user after wait');
+      logger.error('Cannot save task: No user after wait');
       showError('You must be logged in to save tasks. Please refresh the page.');
       return;
     }
 
     try {
       if (editingTask) {
-        console.log('Updating task:', editingTask.id, formData);
+        logger.logWithPrefix('handleSaveTask', 'Updating task:', editingTask.id, formData);
         await updateTask(editingTask.id, formData);
         setIsModalOpen(false);
         setEditingTask(null);
       } else {
-        console.log('Adding new task:', formData);
+        logger.logWithPrefix('handleSaveTask', 'Adding new task:', formData);
         await addTask(formData);
         setIsModalOpen(false);
         setEditingTask(null);
       }
     } catch (error) {
-      console.error('Error saving task:', error);
+      logger.error('Error saving task:', error);
       throw error;
     }
   }, [editingTask, updateTask, addTask, user, authLoading]);
@@ -474,7 +469,7 @@ export default function App() {
       await importData(file);
       setIsSettingsOpen(false);
     } catch (error) {
-      console.error('Import error:', error);
+      logger.error('Import error:', error);
     }
     event.target.value = null;
   }, [importData]);
@@ -516,7 +511,7 @@ export default function App() {
       exportToCSV(filteredTasks, t);
       showSuccess(t('exportSuccess'));
     } catch (error) {
-      console.error('Export error:', error);
+      logger.error('Export error:', error);
       showError(t('exportError'));
     }
   }, [processedTasks, t]);
@@ -533,9 +528,9 @@ export default function App() {
         enabled={true}
         onStatusChange={(connected, error) => {
           if (connected) {
-            console.log('[App] Firebase health check passed');
+            logger.logWithPrefix('App', 'Firebase health check passed');
           } else {
-            console.warn('[App] Firebase health check failed:', error);
+            logger.warn('Firebase health check failed:', error);
           }
         }}
       />
@@ -552,15 +547,15 @@ export default function App() {
           /* Show AuthScreen if no user is logged in */
           (() => {
             const isDev = isLocalDev();
-            console.log(`[UI] ${isDev ? 'LOCAL DEV' : 'PRODUCTION: AUTH REQUIRED'} - Rendering AuthScreen (no user - requires email/password login)`);
+            logger.logWithPrefix('UI', `${isDev ? 'LOCAL DEV' : 'PRODUCTION: AUTH REQUIRED'} - Rendering AuthScreen (no user - requires email/password login)`);
             return <AuthScreen onLogin={login} onRegister={register} t={t} />;
           })()
         ) : (() => {
           /* Reject demo users in production */
           const isDev = isLocalDev();
           if (!isDev && user?.uid?.startsWith('demo-user-')) {
-            console.error('[UI] PRODUCTION: Rejecting demo user - AUTH REQUIRED');
-            console.error('[UI] Demo mode is not allowed in production. Please log in with email/password.');
+            logger.error('[UI] PRODUCTION: Rejecting demo user - AUTH REQUIRED');
+            logger.error('[UI] Demo mode is not allowed in production. Please log in with email/password.');
             // Sign out and show login screen
             logout();
             return <AuthScreen onLogin={login} onRegister={register} t={t} />;
@@ -568,7 +563,7 @@ export default function App() {
           
           /* Show main app if user is logged in */
           const mode = user?.uid?.startsWith('demo-user-') ? 'LOCAL DEMO MODE' : (isDev ? 'LOCAL DEV' : 'PRODUCTION');
-          console.log(`[UI] ${mode} - Rendering main app for user:`, user?.uid, user?.email);
+          logger.logWithPrefix('UI', `${mode} - Rendering main app for user:`, user?.uid, user?.email);
           return (
             <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-900 text-slate-900 dark:text-gray-100 font-sans overflow-hidden transition-colors duration-300" style={{ overflowY: 'hidden' }}>
         {/* Demo Mode Warning */}
@@ -621,316 +616,108 @@ export default function App() {
         />
 
         {/* Main Area */}
-        <div className="flex flex-1 overflow-hidden relative">
-          {/* Navigation Sidebar (Left) */}
-          <NavigationSidebar
-            isOpen={isNavigationSidebarOpen}
-            currentView={currentView}
-            onViewChange={handleViewChange}
-            onToggle={() => setIsNavigationSidebarOpen(!isNavigationSidebarOpen)}
-            onOpenArchive={() => setIsArchiveOpen(true)}
-            onOpenTrash={() => setIsTrashOpen(true)}
-            onOpenSettings={() => setIsSettingsOpen(true)}
-            t={t}
-          />
+        <AppLayout
+          isSidebarOpen={isSidebarOpen}
+          isNavigationSidebarOpen={isNavigationSidebarOpen}
+          isTaskDetailPanelOpen={isTaskDetailPanelOpen}
+          currentView={currentView}
+          ganttViewMode={ganttViewMode}
+          tasks={tasks}
+          processedTasks={processedTasks}
+          loading={loading}
+          authLoading={authLoading}
+          searchTerm={searchTerm}
+          onlyMyTasks={onlyMyTasks}
+          sortOption={sortOption}
+          expandedTaskIds={expandedTaskIds}
+          warningThreshold={warningThreshold}
+          viewStart={viewStart}
+          viewDays={viewDays}
+          zoomLevel={zoomLevel}
+          showChecklistInGantt={showChecklistInGantt}
+          dragState={dragState}
+          dragMovedRef={dragMovedRef}
+          selectedTask={selectedTask}
+          onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+          onToggleNavigationSidebar={() => setIsNavigationSidebarOpen(!isNavigationSidebarOpen)}
+          onTaskClick={handleTaskClick}
+          onToggleExpand={toggleTaskExpansion}
+          onQuickStatusChange={handleQuickStatusChange}
+          onChecklistToggle={handleSidebarChecklistToggle}
+          onSearchChange={setSearchTerm}
+          onOnlyMyTasksToggle={setOnlyMyTasks}
+          onSortChange={setSortOption}
+          onDragStart={handleDragStart}
+          onScrollTimeline={scrollTimeline}
+          onViewChange={handleViewChange}
+          onOpenArchive={() => setIsArchiveOpen(true)}
+          onOpenTrash={() => setIsTrashOpen(true)}
+          onOpenSettings={() => setIsSettingsOpen(true)}
+          onCloseTaskDetailPanel={handleCloseTaskDetailPanel}
+          onEditTask={handleEditTask}
+          user={user}
+          t={t}
+          lang={lang}
+        />
 
-          {/* Tasks Sidebar (only shown in 'tasks' view) */}
-          {currentView === 'tasks' && (
-            <Sidebar
-              isOpen={isSidebarOpen}
-              tasks={processedTasks}
-              loading={authLoading || loading}
-              searchTerm={searchTerm}
-              onlyMyTasks={onlyMyTasks}
-              sortOption={sortOption}
-              expandedTaskIds={expandedTaskIds}
-              warningThreshold={warningThreshold}
-              onToggleExpand={toggleTaskExpansion}
-              onEdit={handleTaskClick}
-              onQuickStatusChange={handleQuickStatusChange}
-              onChecklistToggle={handleSidebarChecklistToggle}
-              onSearchChange={setSearchTerm}
-              onOnlyMyTasksToggle={setOnlyMyTasks}
-              onSortChange={setSortOption}
-              t={t}
-            />
-          )}
-
-          {/* Main Content Area */}
-          {currentView === 'dashboard' ? (
-            <div className="flex-1 overflow-auto bg-gray-50 dark:bg-gray-900">
-              <Suspense fallback={
-                <div className="flex items-center justify-center h-full">
-                  <div className="text-gray-500 dark:text-gray-400">{t('loading')}...</div>
-                </div>
-              }>
-                <Dashboard 
-                  tasks={tasks} 
-                  t={t} 
-                  onTaskClick={handleTaskClick}
-                  warningThreshold={warningThreshold}
-                />
-              </Suspense>
-            </div>
-          ) : currentView === 'gantt' ? (
-            <Suspense fallback={
-              <div className="flex items-center justify-center h-full">
-                <div className="text-gray-500 dark:text-gray-400">{t('loading')}...</div>
-              </div>
-            }>
-              {ganttViewMode === 'split' ? (
-                <SplitView
-                  tasks={tasks}
-                  processedTasks={processedTasks}
-                  loading={authLoading || loading}
-                  searchTerm={searchTerm}
-                  onlyMyTasks={onlyMyTasks}
-                  sortOption={sortOption}
-                  expandedTaskIds={expandedTaskIds}
-                  warningThreshold={warningThreshold}
-                  viewStart={viewStart}
-                  viewDays={viewDays}
-                  zoomLevel={zoomLevel}
-                  showChecklistInGantt={showChecklistInGantt}
-                  dragState={dragState}
-                  dragMovedRef={dragMovedRef}
-                  onToggleExpand={toggleTaskExpansion}
-                  onTaskClick={handleTaskClick}
-                  onQuickStatusChange={handleQuickStatusChange}
-                  onChecklistToggle={handleSidebarChecklistToggle}
-                  onSearchChange={setSearchTerm}
-                  onOnlyMyTasksToggle={setOnlyMyTasks}
-                  onSortChange={setSortOption}
-                  onDragStart={handleDragStart}
-                  onScrollTimeline={scrollTimeline}
-                  scrollToTask={null}
-                  t={t}
-                  lang={lang}
-                />
-              ) : ganttViewMode === 'list' ? (
-                <div className="flex-1 overflow-auto bg-gray-50 dark:bg-gray-900">
-                  <Sidebar
-                    isOpen={true}
-                    tasks={processedTasks}
-                    loading={authLoading || loading}
-                    searchTerm={searchTerm}
-                    onlyMyTasks={onlyMyTasks}
-                    sortOption={sortOption}
-                    expandedTaskIds={expandedTaskIds}
-                    warningThreshold={warningThreshold}
-                    onToggleExpand={toggleTaskExpansion}
-                    onEdit={handleTaskClick}
-                    onQuickStatusChange={handleQuickStatusChange}
-                    onChecklistToggle={handleSidebarChecklistToggle}
-                    onSearchChange={setSearchTerm}
-                    onOnlyMyTasksToggle={setOnlyMyTasks}
-                    onSortChange={setSortOption}
-                    isInSplitView={false}
-                    t={t}
-                  />
-                </div>
-              ) : (
-                <GanttTimeline
-                  tasks={processedTasks}
-                  viewStart={viewStart}
-                  viewDays={viewDays}
-                  zoomLevel={zoomLevel}
-                  warningThreshold={warningThreshold}
-                  showChecklistInGantt={showChecklistInGantt}
-                  dragState={dragState}
-                  dragMovedRef={dragMovedRef}
-                  onDragStart={handleDragStart}
-                  onTaskClick={handleTaskClick}
-                  onScrollTimeline={scrollTimeline}
-                  selectedTaskId={selectedTask?.id}
-                  t={t}
-                  lang={lang}
-                />
-              )}
-            </Suspense>
-          ) : currentView === 'tasks' ? (
-            <div className="flex-1 overflow-auto bg-gray-50 dark:bg-gray-900">
-              <div className="p-4 text-center text-gray-500 dark:text-gray-400">
-                {t('tasks')} {t('view') || 'View'}
-              </div>
-            </div>
-          ) : currentView === 'quicklist' ? (
-            <Suspense fallback={
-              <div className="flex items-center justify-center h-full">
-                <div className="text-gray-500 dark:text-gray-400">{t('loading')}...</div>
-              </div>
-            }>
-              <QuickListView
-                user={user}
-                t={t}
-                onOpenArchive={() => {
-                  setIsQuickListArchiveOpen(true);
-                }}
-                onOpenTrash={() => {
-                  setIsQuickListTrashOpen(true);
-                }}
-              />
-            </Suspense>
-          ) : currentView === 'terms' ? (
-            <Suspense fallback={
-              <div className="flex items-center justify-center h-full">
-                <div className="text-gray-500 dark:text-gray-400">{t('loading')}...</div>
-              </div>
-            }>
-              <TermsView
-                t={t}
-                lang={lang}
-              />
-            </Suspense>
-          ) : null}
-
-          {/* Task Detail Panel (Right) */}
-          <TaskDetailPanel
-            task={selectedTask}
-            isOpen={isTaskDetailPanelOpen && !!selectedTask}
-            onClose={() => {
-              setIsTaskDetailPanelOpen(false);
-              setSelectedTask(null);
-            }}
-            onEdit={(task) => {
-              setEditingTask(task);
-              setIsModalOpen(true);
-              setIsTaskDetailPanelOpen(false);
-            }}
-            warningThreshold={warningThreshold}
-            t={t}
-            lang={lang}
-          />
-        </div>
-
-        {/* Modals - Lazy loaded */}
-        {isModalOpen && (
-          <Suspense fallback={null}>
-            <TaskModal
-              isOpen={isModalOpen}
-              task={editingTask}
-              onClose={() => {
-                setIsModalOpen(false);
-                setEditingTask(null);
-              }}
-              onSave={handleSaveTask}
-              onDelete={handleDeleteTask}
-              warningThreshold={warningThreshold}
-              t={t}
-              lang={lang}
-            />
-          </Suspense>
-        )}
-
-        {isSettingsOpen && (
-          <Suspense fallback={null}>
-            <SettingsModal
-              isOpen={isSettingsOpen}
-              onClose={() => setIsSettingsOpen(false)}
-              warningThreshold={warningThreshold}
-              showChecklistInGantt={showChecklistInGantt}
-              onWarningThresholdChange={setWarningThreshold}
-              onShowChecklistChange={setShowChecklistInGantt}
-              cloudBackups={cloudBackups}
-              loadingBackups={loadingBackups}
-              onCreateCloudBackup={createCloudBackup}
-              onRestoreCloudBackup={restoreCloudBackup}
-              onExportData={exportData}
-              onImportClick={handleImportClick}
-              t={t}
-            />
-          </Suspense>
-        )}
-
-        {isArchiveOpen && (
-          <Suspense fallback={null}>
-            <ArchiveModal
-              isOpen={isArchiveOpen}
-              onClose={() => setIsArchiveOpen(false)}
-              archivedTasks={archivedTasks}
-              onRestore={restoreTaskStatus}
-              onDelete={deleteTask}
-              confirmDeleteId={confirmDeleteId}
-              onSetConfirmDeleteId={setConfirmDeleteId}
-              t={t}
-            />
-          </Suspense>
-        )}
-
-        {isTrashOpen && (
-          <Suspense fallback={null}>
-            <TrashModal
-              isOpen={isTrashOpen}
-              onClose={() => setIsTrashOpen(false)}
-              deletedTasks={deletedTasks}
-              onRestore={restoreTask}
-              onPermanentDelete={permanentDeleteTask}
-              confirmDeleteId={confirmDeleteId}
-              confirmEmptyTrash={confirmEmptyTrash}
-              onSetConfirmDeleteId={setConfirmDeleteId}
-              onSetConfirmEmptyTrash={setConfirmEmptyTrash}
-              onEmptyTrash={handleEmptyTrash}
-              t={t}
-            />
-          </Suspense>
-        )}
-
-        {isQuickListOpen && (
-          <Suspense fallback={null}>
-            <QuickListModal
-              isOpen={isQuickListOpen}
-              onClose={() => setIsQuickListOpen(false)}
-              user={user}
-              t={t}
-              onOpenArchive={() => {
-                setIsQuickListOpen(false);
-                setIsQuickListArchiveOpen(true);
-              }}
-              onOpenTrash={() => {
-                setIsQuickListOpen(false);
-                setIsQuickListTrashOpen(true);
-              }}
-            />
-          </Suspense>
-        )}
-
-        {isQuickListArchiveOpen && (
-          <Suspense fallback={null}>
-            <QuickListArchiveModal
-              isOpen={isQuickListArchiveOpen}
-              onClose={() => setIsQuickListArchiveOpen(false)}
-              archivedItems={quickListArchivedItems}
-              onRestore={(id) => {
-                restoreQuickListItem(id);
-                showSuccess(t('quickListItemRestored'));
-              }}
-              onDelete={(id) => {
-                deleteQuickListItem(id);
-                showSuccess(t('quickListItemDeleted'));
-              }}
-              t={t}
-            />
-          </Suspense>
-        )}
-
-        {isQuickListTrashOpen && (
-          <Suspense fallback={null}>
-            <QuickListTrashModal
-              isOpen={isQuickListTrashOpen}
-              onClose={() => setIsQuickListTrashOpen(false)}
-              deletedItems={quickListDeletedItems}
-              onRestore={(id) => {
-                restoreQuickListItem(id);
-                showSuccess(t('quickListItemRestored'));
-              }}
-              onPermanentDelete={(id) => {
-                permanentDeleteQuickListItem(id);
-                showSuccess(t('quickListItemPermanentlyDeleted'));
-              }}
-              t={t}
-            />
-          </Suspense>
-        )}
+        {/* Modals Container */}
+        <ModalsContainer
+          isModalOpen={isModalOpen}
+          isSettingsOpen={isSettingsOpen}
+          isArchiveOpen={isArchiveOpen}
+          isTrashOpen={isTrashOpen}
+          isQuickListOpen={isQuickListOpen}
+          isQuickListArchiveOpen={isQuickListArchiveOpen}
+          isQuickListTrashOpen={isQuickListTrashOpen}
+          onCloseModal={() => {
+            setIsModalOpen(false);
+            setEditingTask(null);
+          }}
+          onCloseSettings={() => setIsSettingsOpen(false)}
+          onCloseArchive={() => setIsArchiveOpen(false)}
+          onCloseTrash={() => setIsTrashOpen(false)}
+          onCloseQuickList={() => setIsQuickListOpen(false)}
+          onCloseQuickListArchive={() => setIsQuickListArchiveOpen(false)}
+          onCloseQuickListTrash={() => setIsQuickListTrashOpen(false)}
+          editingTask={editingTask}
+          onSaveTask={handleSaveTask}
+          onDeleteTask={handleDeleteTask}
+          warningThreshold={warningThreshold}
+          showChecklistInGantt={showChecklistInGantt}
+          onWarningThresholdChange={setWarningThreshold}
+          onShowChecklistChange={setShowChecklistInGantt}
+          cloudBackups={cloudBackups}
+          loadingBackups={loadingBackups}
+          onCreateCloudBackup={createCloudBackup}
+          onRestoreCloudBackup={restoreCloudBackup}
+          onExportData={exportData}
+          onImportClick={handleImportClick}
+          archivedTasks={archivedTasks}
+          onRestoreTaskStatus={restoreTaskStatus}
+          deletedTasks={deletedTasks}
+          onRestoreTask={restoreTask}
+          onPermanentDeleteTask={permanentDeleteTask}
+          confirmDeleteId={confirmDeleteId}
+          onSetConfirmDeleteId={setConfirmDeleteId}
+          confirmEmptyTrash={confirmEmptyTrash}
+          onSetConfirmEmptyTrash={setConfirmEmptyTrash}
+          onEmptyTrash={handleEmptyTrash}
+          user={user}
+          quickListArchivedItems={quickListArchivedItems}
+          quickListDeletedItems={quickListDeletedItems}
+          onRestoreQuickListItem={restoreQuickListItem}
+          onDeleteQuickListItem={deleteQuickListItem}
+          onPermanentDeleteQuickListItem={permanentDeleteQuickListItem}
+          onOpenQuickListArchive={() => {
+            setIsQuickListOpen(false);
+            setIsQuickListArchiveOpen(true);
+          }}
+          onOpenQuickListTrash={() => {
+            setIsQuickListOpen(false);
+            setIsQuickListTrashOpen(true);
+          }}
+          t={t}
+        />
 
         {/* Hidden file input */}
         <input

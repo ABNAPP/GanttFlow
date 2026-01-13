@@ -2,6 +2,7 @@
 import { memo, useEffect } from 'react';
 import { X, Calendar, User, Tag, FileText, MessageSquare, AlertTriangle } from 'lucide-react';
 import { getTaskOverallStatus, calculateChecklistProgress, getTaskDisplayStatus } from '../../utils/helpers';
+import { sanitizeText } from '../../utils/sanitize';
 
 export const TaskDetailPanel = memo(({
   task,
@@ -71,9 +72,7 @@ export const TaskDetailPanel = memo(({
     >
       {/* Header */}
       <div className="h-12 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-4 flex-shrink-0 bg-gray-50 dark:bg-gray-900">
-        <h3 className="text-sm font-semibold text-gray-800 dark:text-white truncate flex-1">
-          {task.title}
-        </h3>
+        <h3 className="text-sm font-semibold text-gray-800 dark:text-white truncate flex-1" dangerouslySetInnerHTML={{ __html: sanitizeText(task.title) }} />
         <button
           onClick={onClose}
           className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-md text-gray-600 dark:text-gray-300 flex-shrink-0"
@@ -192,49 +191,49 @@ export const TaskDetailPanel = memo(({
                 <div className="flex items-center gap-2 text-sm">
                   <User size={14} className="text-gray-400" />
                   <span className="text-gray-600 dark:text-gray-400">UA:</span>
-                  <span className="text-gray-800 dark:text-gray-200">{task.assignee}</span>
+                  <span className="text-gray-800 dark:text-gray-200" dangerouslySetInnerHTML={{ __html: sanitizeText(task.assignee) }} />
                 </div>
               )}
               {task.executor && (
                 <div className="flex items-center gap-2 text-sm">
                   <User size={14} className="text-gray-400" />
                   <span className="text-gray-600 dark:text-gray-400">HL:</span>
-                  <span className="text-gray-800 dark:text-gray-200">{task.executor}</span>
+                  <span className="text-gray-800 dark:text-gray-200" dangerouslySetInnerHTML={{ __html: sanitizeText(task.executor) }} />
                 </div>
               )}
               {task.cad && (
                 <div className="flex items-center gap-2 text-sm">
                   <User size={14} className="text-gray-400" />
                   <span className="text-gray-600 dark:text-gray-400">CAD:</span>
-                  <span className="text-gray-800 dark:text-gray-200">{task.cad}</span>
+                  <span className="text-gray-800 dark:text-gray-200" dangerouslySetInnerHTML={{ __html: sanitizeText(task.cad) }} />
                 </div>
               )}
               {task.reviewer && (
                 <div className="flex items-center gap-2 text-sm">
                   <User size={14} className="text-gray-400" />
                   <span className="text-gray-600 dark:text-gray-400">G:</span>
-                  <span className="text-gray-800 dark:text-gray-200">{task.reviewer}</span>
+                  <span className="text-gray-800 dark:text-gray-200" dangerouslySetInnerHTML={{ __html: sanitizeText(task.reviewer) }} />
                 </div>
               )}
               {task.agent && (
                 <div className="flex items-center gap-2 text-sm">
                   <User size={14} className="text-gray-400" />
                   <span className="text-gray-600 dark:text-gray-400">O:</span>
-                  <span className="text-gray-800 dark:text-gray-200">{task.agent}</span>
+                  <span className="text-gray-800 dark:text-gray-200" dangerouslySetInnerHTML={{ __html: sanitizeText(task.agent) }} />
                 </div>
               )}
               {task.be && (
                 <div className="flex items-center gap-2 text-sm">
                   <User size={14} className="text-gray-400" />
                   <span className="text-gray-600 dark:text-gray-400">BE:</span>
-                  <span className="text-gray-800 dark:text-gray-200">{task.be}</span>
+                  <span className="text-gray-800 dark:text-gray-200" dangerouslySetInnerHTML={{ __html: sanitizeText(task.be) }} />
                 </div>
               )}
               {task.pl && (
                 <div className="flex items-center gap-2 text-sm">
                   <User size={14} className="text-gray-400" />
                   <span className="text-gray-600 dark:text-gray-400">PL:</span>
-                  <span className="text-gray-800 dark:text-gray-200">{task.pl}</span>
+                  <span className="text-gray-800 dark:text-gray-200" dangerouslySetInnerHTML={{ __html: sanitizeText(task.pl) }} />
                 </div>
               )}
             </div>
@@ -258,12 +257,11 @@ export const TaskDetailPanel = memo(({
                   className="p-2 bg-gray-50 dark:bg-gray-700/50 rounded text-xs"
                 >
                   <div className="text-gray-500 dark:text-gray-400 mb-1">
-                    {comment.author && <span>{comment.author} • </span>}
+                    {comment.author && <span dangerouslySetInnerHTML={{ __html: sanitizeText(comment.author) }} />}
+                    {comment.author && <span> • </span>}
                     {comment.createdAt ? new Date(comment.createdAt).toLocaleString(lang === 'sv' ? 'sv-SE' : 'en-US') : (comment.date ? new Date(comment.date).toLocaleString(lang === 'sv' ? 'sv-SE' : 'en-US') : '')}
                   </div>
-                  <div className="text-gray-800 dark:text-gray-200">
-                    {comment.text}
-                  </div>
+                  <div className="text-gray-800 dark:text-gray-200" dangerouslySetInnerHTML={{ __html: sanitizeText(comment.text) }} />
                 </div>
               ))}
             </div>
@@ -291,9 +289,7 @@ export const TaskDetailPanel = memo(({
                     item.done
                       ? 'line-through text-gray-400'
                       : 'text-gray-700 dark:text-gray-300'
-                  }`}>
-                    {item.text}
-                  </span>
+                  }`} dangerouslySetInnerHTML={{ __html: sanitizeText(item.text) }} />
                 </div>
               ))}
               {task.checklist.length > 5 && (

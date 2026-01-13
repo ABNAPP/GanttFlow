@@ -373,28 +373,107 @@ export const generateId = () => {
 /**
  * Validate task form data
  * Source: src/utils/helpers.js - validateTaskForm
+ * Enhanced with additional validation for security and data quality
  */
 export const validateTaskForm = (formData, t) => {
   const errors = [];
+  const MAX_TITLE_LENGTH = 200;
+  const MAX_CLIENT_LENGTH = 100;
+  const MAX_PHASE_LENGTH = 100;
+  const MAX_ROLE_LENGTH = 100;
+  const MAX_TAG_LENGTH = 50;
+  const MAX_COMMENT_LENGTH = 5000;
+  const MAX_CHECKLIST_TEXT_LENGTH = 500;
 
+  // Title validation
   if (!formData.title || !formData.title.trim()) {
     errors.push(t('errorTitleRequired') || 'Title is required');
+  } else if (formData.title.trim().length > MAX_TITLE_LENGTH) {
+    errors.push(t('errorTitleTooLong') || `Title must be less than ${MAX_TITLE_LENGTH} characters`);
   }
 
+  // Client validation
+  if (formData.client && formData.client.length > MAX_CLIENT_LENGTH) {
+    errors.push(t('errorClientTooLong') || `Client name must be less than ${MAX_CLIENT_LENGTH} characters`);
+  }
+
+  // Phase validation
+  if (formData.phase && formData.phase.length > MAX_PHASE_LENGTH) {
+    errors.push(t('errorPhaseTooLong') || `Phase must be less than ${MAX_PHASE_LENGTH} characters`);
+  }
+
+  // Role validation
+  const roleFields = ['assignee', 'cad', 'reviewer', 'agent', 'be', 'pl', 'other'];
+  roleFields.forEach(field => {
+    if (formData[field] && formData[field].length > MAX_ROLE_LENGTH) {
+      errors.push(t(`error${field.charAt(0).toUpperCase() + field.slice(1)}TooLong`) || `${field} must be less than ${MAX_ROLE_LENGTH} characters`);
+    }
+  });
+
+  // Tag validation
+  if (Array.isArray(formData.tags)) {
+    formData.tags.forEach((tag, index) => {
+      if (typeof tag !== 'string') {
+        errors.push(t('errorInvalidTag') || `Tag at position ${index + 1} is invalid`);
+      } else if (tag.length > MAX_TAG_LENGTH) {
+        errors.push(t('errorTagTooLong') || `Tag "${tag.substring(0, 20)}..." must be less than ${MAX_TAG_LENGTH} characters`);
+      }
+    });
+  }
+
+  // Comment validation
+  if (Array.isArray(formData.comments)) {
+    formData.comments.forEach((comment, index) => {
+      if (comment && comment.text && comment.text.length > MAX_COMMENT_LENGTH) {
+        errors.push(t('errorCommentTooLong') || `Comment ${index + 1} must be less than ${MAX_COMMENT_LENGTH} characters`);
+      }
+    });
+  }
+
+  // Checklist validation
+  if (Array.isArray(formData.checklist)) {
+    formData.checklist.forEach((item, index) => {
+      if (item && item.text && item.text.length > MAX_CHECKLIST_TEXT_LENGTH) {
+        errors.push(t('errorChecklistItemTooLong') || `Checklist item ${index + 1} must be less than ${MAX_CHECKLIST_TEXT_LENGTH} characters`);
+      }
+    });
+  }
+
+  // Date validation
   if (!formData.startDate) {
     errors.push(t('errorStartDateRequired') || 'Start date is required');
+  } else {
+    // Validate date format
+    const startDate = new Date(formData.startDate);
+    if (isNaN(startDate.getTime())) {
+      errors.push(t('errorInvalidStartDate') || 'Invalid start date format');
+    }
   }
 
   if (!formData.endDate) {
     errors.push(t('errorEndDateRequired') || 'End date is required');
+  } else {
+    // Validate date format
+    const endDate = new Date(formData.endDate);
+    if (isNaN(endDate.getTime())) {
+      errors.push(t('errorInvalidEndDate') || 'Invalid end date format');
+    }
   }
 
   if (formData.startDate && formData.endDate) {
     const start = new Date(formData.startDate);
     const end = new Date(formData.endDate);
-    if (end < start) {
-      errors.push(t('errorEndBeforeStart') || 'End date must be after start date');
+    if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
+      if (end < start) {
+        errors.push(t('errorEndBeforeStart') || 'End date must be after start date');
+      }
     }
+  }
+
+  // Status validation
+  const validStatuses = ['Planerad', 'Pågående', 'Klar', 'Försenad'];
+  if (formData.status && !validStatuses.includes(formData.status)) {
+    errors.push(t('errorInvalidStatus') || 'Invalid status value');
   }
 
   return {
